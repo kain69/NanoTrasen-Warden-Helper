@@ -1,117 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
+import { offenses, severityMinutes, disciplinaryPenalties } from './data/offenses';
+import SettingsModal from './components/SettingsModal';
+import ObjectDetails from './components/ObjectDetails';
+import OffensesTable from './components/OffensesTable';
+import SelectedOffensesList from './components/SelectedOffensesList';
+import GuiltModal from './components/GuiltModal';
+import CompletionModal from './components/CompletionModal';
+import ComplicityModal from './components/ComplicityModal';
+import ModifiersModal from './components/ModifiersModal';
+import GlobalModifiersModal from './components/GlobalModifiersModal';
+import ResultModal from './components/ResultModal';
+import {
+    OffenseWithModifiers,
+    GlobalModifiers,
+    Settings,
+    Timer,
+    ObjectDetails as ObjectDetailsType,
+    Result,
+} from './types';
 
 Modal.setAppElement('#root');
 
-interface Offense {
-    code: string;
-    title: string;
-    description: string;
-    chapter: string;
-    severity: string;
-}
-
-interface OffenseWithModifiers {
-    code: string;
-    modifiers: string[];
-}
-
-interface GlobalModifiers {
-    deal: boolean;
-    dealReduction: number;
-    recidivism: boolean;
-    recidivismCount: number;
-}
-
-const offenses: Offense[] = [
-    { code: '111', title: 'Оскорбление символов власти', description: 'Неуважение к корпорации NanoTrasen, ее символике...', chapter: '11X', severity: 'XX1' },
-    { code: '112', title: 'Сопротивление органам власти', description: 'Несоблюдение законных требований представителей власти...', chapter: '11X', severity: 'XX2' },
-    { code: '113', title: 'Забастовка', description: 'Несанкционированный отказ от работы сотрудников...', chapter: '11X', severity: 'XX3' },
-    { code: '115', title: 'Неподчинение в ЧС', description: 'Неисполнение законных требований квалифицированного персонала...', chapter: '11X', severity: 'XX5' },
-    { code: '116', title: 'Мятеж', description: 'Вооруженное выступление, возникшее стихийно...', chapter: '11X', severity: 'XX6' },
-    { code: '121', title: 'Неуважение к суду', description: 'Неуважения к суду, участникам судебного заседания...', chapter: '12X', severity: 'XX1' },
-    { code: '122', title: 'Сокрытие преступления', description: 'Заранее не обещанное укрывательство легкого, среднего или тяжкого...', chapter: '12X', severity: 'XX2' },
-    { code: '123', title: 'Побег из места заключения', description: 'Незаконный выход с территории временного заключения...', chapter: '12X', severity: 'XX3' },
-    { code: '124', title: 'Неисполнение приговора суда', description: 'Невыполнение или ненадлежащее исполнение решения, постановления суда...', chapter: '12X', severity: 'XX4' },
-    { code: '125', title: 'Сокрытие крупного преступления', description: 'Заранее не обещанное укрывательство особо тяжкого...', chapter: '12X', severity: 'XX5' },
-    { code: '126', title: 'Побег из места пожизненного заключения', description: 'Незаконный выход с территории пожизненного заключения...', chapter: '12X', severity: 'XX6' },
-    { code: '131', title: 'Пропаганда запрещённых организаций', description: 'Массовая демонстрация предметов с символикой запрещённых организаций...', chapter: '13X', severity: 'XX1' },
-    { code: '133', title: 'Саботаж', description: 'Помеха работе отдела или создание частичной неработоспособности...', chapter: '13X', severity: 'XX3' },
-    { code: '135', title: 'Членство в преступных группировках', description: 'Членство в группировках, запрещенных корпорацией NanoTrasen...', chapter: '13X', severity: 'XX5' },
-    { code: '136', title: 'Крупный саботаж', description: 'Нанесение значительного ущерба станции...', chapter: '13X', severity: 'XX6' },
-    { code: '141', title: 'Неисполнение особых распоряжений', description: 'Неисполнение особых распоряжений', chapter: '14X', severity: 'XX1' },
-    { code: '142', title: 'Халатность', description: 'Неисполнение или ненадлежащее исполнение профессиональных обязанностей...', chapter: '14X', severity: 'XX2' },
-    { code: '144', title: 'Грубая халатность', description: 'Неисполнение или ненадлежащее исполнение профессиональных обязанностей...', chapter: '14X', severity: 'XX4' },
-    { code: '145', title: 'Самоуправство', description: 'Незаконное присвоение полномочий должностного лица...', chapter: '14X', severity: 'XX5' },
-    { code: '212', title: 'Нанесение легких телесных повреждений', description: 'Причинение вреда здоровью, не опасного для жизни...', chapter: '21X', severity: 'XX2' },
-    { code: '213', title: 'Причинение среднего вреда здоровью', description: 'Причинение вреда здоровью, не опасного для жизни и требующего...', chapter: '21X', severity: 'XX3' },
-    { code: '214', title: 'Причинение тяжкого вреда здоровью', description: 'Причинение вреда здоровью, опасного для жизни...', chapter: '21X', severity: 'XX4' },
-    { code: '215', title: 'Причинение смерти', description: 'Противозаконное лишение жизни разумного существа...', chapter: '21X', severity: 'XX5' },
-    { code: '216', title: 'Уничтожение тела', description: 'Причинение смерти с отсутствием возможности клонирования...', chapter: '21X', severity: 'XX6' },
-    { code: '221', title: 'Оскорбление, клевета', description: 'Нарушение личных границ, приставания...', chapter: '22X', severity: 'XX1' },
-    { code: '223', title: 'Дача ложных показаний', description: 'Дача ложных показаний, которые могли привести или привели...', chapter: '22X', severity: 'XX3' },
-    { code: '224', title: 'Незаконное ограничение свободы', description: 'Незаконные захват, перемещение и последующее удержание...', chapter: '22X', severity: 'XX4' },
-    { code: '311', title: 'Мелкая кража', description: 'Тайное хищение имущества общего пользования...', chapter: '31X', severity: 'XX1' },
-    { code: '312', title: 'Кража', description: 'Тайное хищение личных вещей, имущества отделов станции...', chapter: '31X', severity: 'XX2' },
-    { code: '313', title: 'Грабеж', description: 'Открытое хищение чужого имущества...', chapter: '31X', severity: 'XX3' },
-    { code: '314', title: 'Крупное хищение', description: 'Хищение редкого или важного для работы отделов имущества...', chapter: '31X', severity: 'XX4' },
-    { code: '315', title: 'Разбой', description: 'Нападение в целях хищения чужого имущества...', chapter: '31X', severity: 'XX5' },
-    { code: '316', title: 'Хищение особо ценного имущества', description: 'Незаконное присвоение особо ценного или же критически важного...', chapter: '31X', severity: 'XX6' },
-    { code: '321', title: 'Порча имущества', description: 'Повреждение или порча имущества общего пользования...', chapter: '32X', severity: 'XX1' },
-    { code: '322', title: 'Порча ценного имущества', description: 'Повреждение корпуса киборгов и иных синтетиков...', chapter: '32X', severity: 'XX2' },
-    { code: '323', title: 'Уничтожение имущества', description: 'Уничтожение имущества общего пользования...', chapter: '32X', severity: 'XX3' },
-    { code: '324', title: 'Уничтожение ценного имущества', description: 'Уничтожение корпуса или изменение законов киборгов...', chapter: '32X', severity: 'XX4' },
-    { code: '326', title: 'Уничтожение особо ценного имущества', description: 'Уничтожение особо ценного или же критически важного оборудования...', chapter: '32X', severity: 'XX6' },
-    { code: '411', title: 'Хулиганство', description: 'Нарушение общественного порядка, выражающее явное неуважение...', chapter: '41X', severity: 'XX1' },
-    { code: '413', title: 'Мошенничество', description: 'Хищение или приобретение права на имущества общего пользования...', chapter: '41X', severity: 'XX3' },
-    { code: '415', title: 'Крупное мошенничество', description: 'Хищение или приобретение права редкое или важного имущество...', chapter: '41X', severity: 'XX5' },
-    { code: '416', title: 'Террористический акт', description: 'Действия, направленные на дестабилизацию деятельности органов власти...', chapter: '41X', severity: 'XX6' },
-    { code: '421', title: 'Необоснованное посещение технических помещений, космоса', description: 'Нахождение на территории технических помещений...', chapter: '42X', severity: 'XX1' },
-    { code: '422', title: 'Проникновение на территорию отделов', description: 'Нахождение на территории закрытого отдела...', chapter: '42X', severity: 'XX2' },
-    { code: '423', title: 'Проникновение в стратегическую точку', description: 'Нахождение на территории стратегической точки...', chapter: '42X', severity: 'XX3' },
-    { code: '424', title: 'Проникновение в защищенную стратегическую точку', description: 'Нахождение на территории защищённой стратегической точки...', chapter: '42X', severity: 'XX4' },
-    { code: '425', title: 'Незаконная эвакуация с территории комплекса', description: 'Несанкционированный вылет с территории действия блюспейс маяка...', chapter: '42X', severity: 'XX5' },
-    { code: '426', title: 'Проникновение на территорию объекта NanoTrasen', description: 'Нахождение на территории NanoTrasen, не имея соответствующего разрешения...', chapter: '42X', severity: 'XX6' },
-    { code: '431', title: 'Незаконное ношение форменной одежды', description: 'Незаконное ношение комбинезона, скафандра или КПК...', chapter: '43X', severity: 'XX1' },
-    { code: '432', title: 'Незаконное владение опасными предметами', description: 'Незаконное владение опасными инструментами...', chapter: '43X', severity: 'XX2' },
-    { code: '433', title: 'Нарушение порядка владения регулируемыми предметами', description: 'Незаконное владение предметами, предназначенными для летального боя...', chapter: '43X', severity: 'XX3' },
-    { code: '434', title: 'Незаконное владение предметами ограниченного оборота', description: 'Незаконное владение огнестрельным оружием...', chapter: '43X', severity: 'XX4' },
-    { code: '435', title: 'Незаконное владение контрабандными предметами', description: 'Незаконное владение оборудованием и экипировкой вражеских организаций...', chapter: '43X', severity: 'XX5' },
-    { code: '436', title: 'Незаконное владение террористическими средствами', description: 'Незаконное владение предметами со свойствами массового поражения...', chapter: '43X', severity: 'XX6' },
-];
-
-const severityMinutes: Record<string, number> = {
-    XX1: 5,
-    XX2: 10,
-    XX3: 15,
-    XX4: 25,
-    XX5: Infinity,
-    XX6: Infinity,
-};
-
-const disciplinaryPenalties: Record<string, string> = {
-    XX1: 'Не предусмотрено',
-    XX2: 'На усмотрение главы отдела',
-    XX3: 'На усмотрение главы отдела',
-    XX4: 'На усмотрение главы отдела',
-    XX5: 'Увольнение',
-    XX6: 'Увольнение',
-};
-
-// Определяем модификаторы как объекты с названием и описанием
-const modifierOptions: { name: string; description: string }[] = [
-    { name: 'Гипноз', description: 'снятие обвинений' },
-    { name: 'Крайняя необходимость', description: 'снятие обвинений' },
-    { name: 'Допустимая самооборона', description: 'снятие обвинений' },
-    { name: 'Манипулирование синтетиками', description: 'полное наказание' },
-    { name: 'Должностное преступление', description: '+10 минут к наказанию' },
-    { name: 'Преступление против должностного лица', description: '+10 минут к наказанию' },
-    { name: 'Расизм', description: '+10 минут к наказанию' },
-    { name: 'Явка с повинной', description: '-5 минут к наказанию' },
-];
-
 const App: React.FC = () => {
     const [selectedOffenses, setSelectedOffenses] = useState<OffenseWithModifiers[]>([]);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isGuiltModalOpen, setIsGuiltModalOpen] = useState(false);
     const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
     const [isComplicityModalOpen, setIsComplicityModalOpen] = useState(false);
@@ -128,80 +41,16 @@ const App: React.FC = () => {
         recidivism: false,
         recidivismCount: 0,
     });
-    const [settings, setSettings] = useState({
+    const [settings, setSettings] = useState<Settings>({
         fullName: '',
         position: 'Смотритель',
-        station: '',
+        station: 'Station XX-000',
     });
-    const [timer, setTimer] = useState({ elapsedSeconds: 0, running: false });
+    const [timer, setTimer] = useState<Timer>({ elapsedSeconds: 0, running: false });
     const [startTimeInput, setStartTimeInput] = useState('');
     const [baseStartSeconds, setBaseStartSeconds] = useState(0);
-    const [objectDetails, setObjectDetails] = useState({ fullName: '', position: '' });
-
-    // Парсинг времени из формата чч:мм:сс в секунды
-    const parseTimeToSeconds = (time: string): number => {
-        const [hours, minutes, seconds] = time.split(':').map(Number);
-        return (hours * 3600) + (minutes * 60) + seconds;
-    };
-
-    // Форматирование секунд в формат чч:мм:сс
-    const formatTime = (seconds: number): string => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes
-            .toString()
-            .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    // Обработка ввода времени
-    const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value;
-        const cursorPosition = e.target.selectionStart || 0;
-
-        // Убираем всё, кроме цифр
-        let value = rawValue.replace(/\D/g, '');
-
-        // Ограничиваем до 6 цифр
-        if (value.length > 6) {
-            value = value.slice(0, 6);
-        }
-
-        // Формируем отформатированное значение
-        let formatted = '';
-        if (value.length > 0) {
-            formatted += value.substring(0, 2);
-        }
-        if (value.length > 2) {
-            formatted += ':' + value.substring(2, 4);
-        }
-        if (value.length > 4) {
-            formatted += ':' + value.substring(4, 6);
-        }
-
-        setStartTimeInput(formatted);
-
-        // После обновления переместить курсор на правильную позицию
-        setTimeout(() => {
-            if (inputRef.current) {
-                let newCursorPos = cursorPosition;
-
-                // Корректируем позицию с учётом двоеточий
-                if (cursorPosition === 2 || cursorPosition === 5) {
-                    newCursorPos += 1;
-                } else if (cursorPosition > 2 && cursorPosition <= 4) {
-                    newCursorPos += 1;
-                } else if (cursorPosition > 4) {
-                    newCursorPos += 2;
-                }
-
-                inputRef.current.selectionStart = newCursorPos;
-                inputRef.current.selectionEnd = newCursorPos;
-            }
-        }, 0);
-    };
+    const [objectDetails, setObjectDetails] = useState<ObjectDetailsType>({ fullName: '', position: '' });
+    const [result, setResult] = useState<Result | null>(null);
 
     // Таймер: обновление каждую секунду
     useEffect(() => {
@@ -218,16 +67,6 @@ const App: React.FC = () => {
             if (interval) clearInterval(interval);
         };
     }, [timer.running]);
-
-    const startTimer = () => {
-        const newStartSeconds = parseTimeToSeconds(startTimeInput);
-        setBaseStartSeconds(newStartSeconds);
-        setTimer({ elapsedSeconds: 0, running: true });
-    };
-
-    // Вычисляем общее время (стартовое время при последнем старте + прошедшее по таймеру)
-    const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
-    const currentTime = formatTime(totalSeconds);
 
     const toggleOffense = (code: string) => {
         setSelectedOffenses((prev) => {
@@ -268,7 +107,6 @@ const App: React.FC = () => {
     const handleComplicitySelection = (complicityType: string) => {
         setComplicity(complicityType);
         setIsComplicityModalOpen(false);
-        // Открываем модальное окно модификаторов для первой статьи
         if (selectedOffenses.length > 0) {
             setCurrentOffenseCode(selectedOffenses[0].code);
             setIsModifiersModalOpen(true);
@@ -277,7 +115,6 @@ const App: React.FC = () => {
 
     const handleModifiersSelection = () => {
         setIsModifiersModalOpen(false);
-        // Переходим к следующей статье или открываем модалку глобальных модификаторов
         const currentIndex = selectedOffenses.findIndex((o) => o.code === currentOffenseCode);
         if (currentIndex < selectedOffenses.length - 1) {
             setCurrentOffenseCode(selectedOffenses[currentIndex + 1].code);
@@ -295,45 +132,43 @@ const App: React.FC = () => {
     const calculateVerdict = () => {
         if (!guilt || !completion || !complicity) return;
 
-        // Group offenses by chapter and select the most severe per chapter
-        const chapters: Record<string, Offense[]> = {};
+        const chapters: Record<string, OffenseWithModifiers[]> = {};
         selectedOffenses.forEach((offenseWithMods) => {
             const offense = offenses.find((o) => o.code === offenseWithMods.code);
             if (offense) {
                 if (!chapters[offense.chapter]) chapters[offense.chapter] = [];
-                chapters[offense.chapter].push(offense);
+                chapters[offense.chapter].push(offenseWithMods);
             }
         });
 
-        const finalOffenses: Offense[] = [];
+        const finalOffenses: OffenseWithModifiers[] = [];
         Object.values(chapters).forEach((chapterOffenses) => {
             const mostSevere = chapterOffenses.reduce((prev, curr) => {
-                const prevSeverity = Object.keys(severityMinutes).indexOf(prev.severity);
-                const currSeverity = Object.keys(severityMinutes).indexOf(curr.severity);
+                const prevOffense = offenses.find((o) => o.code === prev.code)!;
+                const currOffense = offenses.find((o) => o.code === curr.code)!;
+                const prevSeverity = Object.keys(severityMinutes).indexOf(prevOffense.severity);
+                const currSeverity = Object.keys(severityMinutes).indexOf(currOffense.severity);
                 return currSeverity > prevSeverity ? curr : prev;
             });
             finalOffenses.push(mostSevere);
         });
 
-        // Calculate total penalty and determine disciplinary penalty
         let totalMinutes = 0;
         let isLifeSentence = false;
         let isDeathPenalty = false;
         let maxSeverity: string = 'XX1';
         const offenseDetails: string[] = [];
 
-        finalOffenses.forEach((offense) => {
-            const offenseWithMods = selectedOffenses.find((o) => o.code === offense.code)!;
+        finalOffenses.forEach((offenseWithMods) => {
+            const offense = offenses.find((o) => o.code === offenseWithMods.code)!;
             let minutes = severityMinutes[offense.severity];
             const appliedModifiers: string[] = [];
 
-            // Update maxSeverity for disciplinary penalty
             const severityOrder = ['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'];
             if (severityOrder.indexOf(offense.severity) > severityOrder.indexOf(maxSeverity)) {
                 maxSeverity = offense.severity;
             }
 
-            // Apply guilt modifier
             if (guilt === 'Преступление, совершенное по неосторожности') {
                 if (!['Халатность', 'Грубая халатность'].includes(offense.title)) {
                     minutes = Math.max(0, minutes - 5);
@@ -343,7 +178,6 @@ const App: React.FC = () => {
                 }
             }
 
-            // Apply completion modifier
             if (completion === 'Покушение на преступление') {
                 minutes = minutes;
                 appliedModifiers.push('Покушение на преступление (полное наказание)');
@@ -362,7 +196,6 @@ const App: React.FC = () => {
                 appliedModifiers.push('Успешный добровольный отказ от преступления (снятие обвинений)');
             }
 
-            // Apply complicity modifier
             if (complicity === 'Организатор') {
                 if (complicity !== 'Исполнитель') {
                     minutes += 10;
@@ -374,7 +207,6 @@ const App: React.FC = () => {
                 appliedModifiers.push(`${complicity} (полное наказание)`);
             }
 
-            // Apply offense-specific modifiers
             if (offenseWithMods.modifiers.includes('Гипноз')) {
                 minutes = 0;
                 appliedModifiers.push('Гипноз (снятие обвинений)');
@@ -415,10 +247,13 @@ const App: React.FC = () => {
             if (offense.severity === 'XX6') isDeathPenalty = true;
 
             totalMinutes += minutes;
-            offenseDetails.push(`[${offense.code} - ${offense.title}], модификаторы: ${appliedModifiers.length > 0 ? appliedModifiers.join(', ') : 'отсутствуют'}`);
+            offenseDetails.push(
+                `[${offense.code} - ${offense.title}], модификаторы: ${
+                    appliedModifiers.length > 0 ? appliedModifiers.join(', ') : 'отсутствуют'
+                }`
+            );
         });
 
-        // Apply global modifiers (Сделка со следствием и Рецидив)
         if (globalModifiers.deal && globalModifiers.dealReduction > 0) {
             totalMinutes = Math.max(0, totalMinutes - globalModifiers.dealReduction);
             offenseDetails.push(`Сделка со следствием (-${globalModifiers.dealReduction} минут)`);
@@ -429,13 +264,14 @@ const App: React.FC = () => {
             offenseDetails.push(`Рецидив (+${recidivismMinutes} минут за ${globalModifiers.recidivismCount} случаев)`);
         }
 
-        // Determine final legal penalty
         let finalPenalty = '';
-        if (guilt === 'Отсутствие вины' ||
+        if (
+            guilt === 'Отсутствие вины' ||
             completion === 'Успешный добровольный отказ от преступления' ||
             selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
             selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))) {
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
             finalPenalty = 'Снятие обвинений';
         } else if (isDeathPenalty) {
             finalPenalty = 'Высшая мера наказания';
@@ -445,17 +281,19 @@ const App: React.FC = () => {
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
         }
 
-        // Determine disciplinary penalty based on the most severe offense
         let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
-        if (guilt === 'Отсутствие вины' ||
+        if (
+            guilt === 'Отсутствие вины' ||
             completion === 'Успешный добровольный отказ от преступления' ||
             selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
             selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))) {
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
             disciplinaryPenalty = 'Не предусмотрено';
         }
 
-        // Generate document text
+        const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
+        const currentTime = totalSeconds.toString();
         const currentDate = '27.04.3025';
         const documentText = `
 [color=#982a2d]███░███░░░░██░░░░[/color]
@@ -493,8 +331,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         setIsResultModalOpen(true);
     };
 
-    const [result, setResult] = useState<{ penalty: string; documentText: string } | null>(null);
-
     const copyToClipboard = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -505,219 +341,40 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         }
     };
 
-    const chapters = [
-        { section: '1XX', chapters: ['11X', '12X', '13X', '14X'] },
-        { section: '2XX', chapters: ['21X', '22X'] },
-        { section: '3XX', chapters: ['31X', '32X'] },
-        { section: '4XX', chapters: ['41X', '42X', '43X'] },
-    ];
-
-    // Получение названия статьи по коду
-    const getOffenseTitle = (code: string | null): string => {
-        const offense = offenses.find((o) => o.code === code);
-        return offense ? offense.title : '';
-    };
-
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4">
-            {/* Settings Section */}
-            <div className="mb-4 p-4 bg-gray-800 rounded-lg">
-                <h2 className="text-xl font-bold mb-2">Настройки</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label className="block mb-1">ФИО составителя:</label>
-                        <input
-                            type="text"
-                            value={settings.fullName}
-                            onChange={(e) => setSettings({...settings, fullName: e.target.value})}
-                            className="w-full p-2 bg-gray-700 rounded"
-                            placeholder="Иванов Иван"
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1">Должность составителя:</label>
-                        <input
-                            type="text"
-                            value={settings.position}
-                            onChange={(e) => setSettings({...settings, position: e.target.value})}
-                            className="w-full p-2 bg-gray-700 rounded"
-                            placeholder="Смотритель"
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1">Название станции:</label>
-                        <input
-                            type="text"
-                            value={settings.station}
-                            onChange={(e) => setSettings({...settings, station: e.target.value})}
-                            className="w-full p-2 bg-gray-700 rounded"
-                            placeholder="Station XX-000"
-                        />
-                    </div>
-                </div>
-                <div className="mt-4 flex flex-col items-start">
-                    <h3 className="mb-2 text-lg font-semibold">Время от начала смены</h3>
-                    <div className="flex items-start space-x-4">
-                        <div className="flex flex-col items-center">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                value={startTimeInput}
-                                onChange={handleStartTimeChange}
-                                className="p-2 h-10 bg-gray-700 rounded w-24 text-center"
-                                placeholder="00:00:00"
-                            />
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <button
-                                onClick={startTimer}
-                                className="px-4 h-10 bg-blue-600 rounded hover:bg-blue-700"
-                            >
-                                Старт
-                            </button>
-                            <label className="block text-sm invisible">Кнопка</label>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <div className="p-2 h-10 flex items-center justify-center bg-gray-700 rounded w-24 text-center">
-                                {currentTime}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold">Калькулятор приговоров</h1>
+                <button
+                    onClick={() => setIsSettingsModalOpen(true)}
+                    className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                >
+                    Настройки
+                </button>
             </div>
 
-            {/* Object Details */}
-            <div className="mb-4 p-4 bg-gray-800 rounded-lg">
-                <h2 className="text-xl font-bold mb-2">Данные объекта</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block mb-1">ФИО объекта:</label>
-                        <input
-                            type="text"
-                            value={objectDetails.fullName}
-                            onChange={(e) => setObjectDetails({...objectDetails, fullName: e.target.value})}
-                            className="w-full p-2 bg-gray-700 rounded"
-                            placeholder="Петров Петр"
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1">Должность объекта:</label>
-                        <input
-                            type="text"
-                            value={objectDetails.position}
-                            onChange={(e) => setObjectDetails({...objectDetails, position: e.target.value})}
-                            className="w-full p-2 bg-gray-700 rounded"
-                            placeholder="Инженер"
-                        />
-                    </div>
-                </div>
-            </div>
+            <SettingsModal
+                isOpen={isSettingsModalOpen}
+                onRequestClose={() => setIsSettingsModalOpen(false)}
+                settings={settings}
+                setSettings={setSettings}
+                timer={timer}
+                setTimer={setTimer}
+                startTimeInput={startTimeInput}
+                setStartTimeInput={setStartTimeInput}
+                baseStartSeconds={baseStartSeconds}
+                setBaseStartSeconds={setBaseStartSeconds}
+            />
 
-            {/* Offenses Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                    <thead>
-                    <tr>
-                        <th className="bg-gray-800 p-2" rowSpan={2}>Раздел</th>
-                        <th className="bg-gray-800 p-2" rowSpan={2}>Глава</th>
-                        <th className="bg-gray-800 p-2" colSpan={6}>Статьи</th>
-                    </tr>
-                    <tr>
-                        <th className="bg-green-800 p-2">XX1<br />Незначительные правонарушения</th>
-                        <th className="bg-yellow-800 p-2">XX2<br />Легкие правонарушения</th>
-                        <th className="bg-orange-800 p-2">XX3<br />Средние правонарушения</th>
-                        <th className="bg-red-800 p-2">XX4<br />Тяжкие правонарушения</th>
-                        <th className="bg-red-900 p-2">XX5<br />Особо тяжкие правонарушения</th>
-                        <th className="bg-black p-2">XX6<br />Критические правонарушения</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {chapters.map((section) => (
-                        section.chapters.map((chapter, idx) => {
-                            const chapterOffenses = offenses.filter((o) => o.chapter === chapter);
-                            return (
-                                <tr key={chapter}>
-                                    {idx === 0 && (
-                                        <th className="bg-gray-800 p-2" rowSpan={section.chapters.length}>{section.section}</th>
-                                    )}
-                                    <th className="bg-gray-800 p-2">{chapter}</th>
-                                    {['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'].map((severity) => {
-                                        const offense = chapterOffenses.find((o) => o.severity === severity);
-                                        const isSelected = offense && selectedOffenses.some((o) => o.code === offense.code);
-                                        return (
-                                            <td
-                                                key={severity}
-                                                className={`p-2 cursor-pointer border border-gray-700 ${
-                                                    isSelected
-                                                        ? 'bg-amber-500'
-                                                        : severity === 'XX1'
-                                                            ? 'bg-green-800'
-                                                            : severity === 'XX2'
-                                                                ? 'bg-yellow-800'
-                                                                : severity === 'XX3'
-                                                                    ? 'bg-orange-800'
-                                                                    : severity === 'XX4'
-                                                                        ? 'bg-red-800'
-                                                                        : severity === 'XX5'
-                                                                            ? 'bg-red-900'
-                                                                            : 'bg-black'
-                                                }`}
-                                                onClick={() => {
-                                                    if (offense) {
-                                                        toggleOffense(offense.code);
-                                                    }
-                                                }}
-                                            >
-                                                {offense ? (
-                                                    <span className="tooltip relative">
-                              <i>{offense.title}</i>
-                              <span className="tooltiptext">
-                                <b>{offense.code}</b><br />
-                                  {offense.description}
-                              </span>
-                            </span>
-                                                ) : ''}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            );
-                        })
-                    ))}
-                    </tbody>
-                </table>
-            </div>
+            <ObjectDetails objectDetails={objectDetails} setObjectDetails={setObjectDetails} />
 
-            {/* Selected Offenses List */}
-            <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-                <h2 className="text-xl font-bold mb-2">Выбранные статьи</h2>
-                {selectedOffenses.length > 0 ? (
-                    <ul className="list-disc pl-5">
-                        {selectedOffenses.map((offenseWithMods) => {
-                            const offense = offenses.find((o) => o.code === offenseWithMods.code);
-                            return (
-                                <li key={offenseWithMods.code}>
-                                    {offense?.code} - {offense?.title}
-                                    <button
-                                        onClick={() => toggleOffense(offenseWithMods.code)}
-                                        className="ml-2 px-2 py-1 bg-red-600 rounded hover:bg-red-700"
-                                    >
-                                        Удалить
-                                    </button>
-                                    <button
-                                        onClick={() => openModifiersModal(offenseWithMods.code)}
-                                        className="ml-2 px-2 py-1 bg-blue-600 rounded hover:bg-blue-700"
-                                    >
-                                        Модификаторы
-                                    </button>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                ) : (
-                    <p>Статьи не выбраны.</p>
-                )}
-            </div>
+            <OffensesTable selectedOffenses={selectedOffenses} toggleOffense={toggleOffense} />
+
+            <SelectedOffensesList
+                selectedOffenses={selectedOffenses}
+                toggleOffense={toggleOffense}
+                openModifiersModal={openModifiersModal}
+            />
 
             <button
                 onClick={openGuiltModal}
@@ -726,283 +383,47 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 Вынести вердикт
             </button>
 
-            {/* Guilt Modal */}
-            <Modal
+            <GuiltModal
                 isOpen={isGuiltModalOpen}
                 onRequestClose={() => setIsGuiltModalOpen(false)}
-                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-                <h2 className="text-xl font-bold mb-4">Форма вины</h2>
-                <div className="space-y-2">
-                    <button
-                        onClick={() => handleGuiltSelection('Преступление, совершенное умышленно')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Преступление, совершенное умышленно (полное наказание)
-                    </button>
-                    <button
-                        onClick={() => handleGuiltSelection('Преступление, совершенное по неосторожности')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Преступление, совершенное по неосторожности (-5 минут к наказанию)
-                    </button>
-                    <button
-                        onClick={() => handleGuiltSelection('Отсутствие вины')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Отсутствие вины (снятие обвинений)
-                    </button>
-                </div>
-                <button
-                    onClick={() => setIsGuiltModalOpen(false)}
-                    className="mt-4 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
-            </Modal>
+                handleGuiltSelection={handleGuiltSelection}
+            />
 
-            {/* Completion Modal */}
-            <Modal
+            <CompletionModal
                 isOpen={isCompletionModalOpen}
                 onRequestClose={() => setIsCompletionModalOpen(false)}
-                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-                <h2 className="text-xl font-bold mb-4">Неоконченное и оконченное преступление</h2>
-                <div className="space-y-2">
-                    <button
-                        onClick={() => handleCompletionSelection('Оконченное преступление')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Оконченное преступление (полное наказание)
-                    </button>
-                    <button
-                        onClick={() => handleCompletionSelection('Покушение на преступление')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Покушение на преступление (полное наказание)
-                    </button>
-                    <button
-                        onClick={() => handleCompletionSelection('Приготовление к преступлению')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Приготовление к преступлению (зависит от статьи)
-                    </button>
-                    <button
-                        onClick={() => handleCompletionSelection('Безуспешный добровольный отказ от преступления')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Безуспешный добровольный отказ от преступления (-5 минут)
-                    </button>
-                    <button
-                        onClick={() => handleCompletionSelection('Успешный добровольный отказ от преступления')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Успешный добровольный отказ от преступления (снятие обвинений)
-                    </button>
-                </div>
-                <button
-                    onClick={() => setIsCompletionModalOpen(false)}
-                    className="mt-4 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
-            </Modal>
+                handleCompletionSelection={handleCompletionSelection}
+            />
 
-            {/* Complicity Modal */}
-            <Modal
+            <ComplicityModal
                 isOpen={isComplicityModalOpen}
                 onRequestClose={() => setIsComplicityModalOpen(false)}
-                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-                <h2 className="text-xl font-bold mb-4">Соучастие в преступлении</h2>
-                <div className="space-y-2">
-                    <button
-                        onClick={() => handleComplicitySelection('Исполнитель')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Исполнитель (полное наказание)
-                    </button>
-                    <button
-                        onClick={() => handleComplicitySelection('Подстрекатель')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Подстрекатель (полное наказание)
-                    </button>
-                    <button
-                        onClick={() => handleComplicitySelection('Пособник')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Пособник (полное наказание)
-                    </button>
-                    <button
-                        onClick={() => handleComplicitySelection('Организатор')}
-                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                        Организатор (+10 минут)
-                    </button>
-                </div>
-                <button
-                    onClick={() => setIsComplicityModalOpen(false)}
-                    className="mt-4 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
-            </Modal>
+                handleComplicitySelection={handleComplicitySelection}
+            />
 
-            {/* Optional Modifiers Modal for Each Offense */}
-            <Modal
+            <ModifiersModal
                 isOpen={isModifiersModalOpen}
                 onRequestClose={() => setIsModifiersModalOpen(false)}
-                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-                <h2 className="text-xl font-bold mb-4">
-                    Модификаторы для статьи {currentOffenseCode} - {getOffenseTitle(currentOffenseCode)}
-                </h2>
-                <div className="space-y-2">
-                    {modifierOptions.map((modifier) => (
-                        <div key={modifier.name} className="flex items-center">
-                            <input
-                                type="checkbox"
-                                checked={
-                                    selectedOffenses.find((o) => o.code === currentOffenseCode)?.modifiers.includes(modifier.name) || false
-                                }
-                                onChange={() => {
-                                    setSelectedOffenses((prev) =>
-                                        prev.map((o) =>
-                                            o.code === currentOffenseCode
-                                                ? {
-                                                    ...o,
-                                                    modifiers: o.modifiers.includes(modifier.name)
-                                                        ? o.modifiers.filter((m) => m !== modifier.name)
-                                                        : [...o.modifiers, modifier.name],
-                                                }
-                                                : o
-                                        )
-                                    );
-                                }}
-                                className="mr-2"
-                            />
-                            <label>{`${modifier.name} (${modifier.description})`}</label>
-                        </div>
-                    ))}
-                </div>
-                <button
-                    onClick={handleModifiersSelection}
-                    className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-                >
-                    Подтвердить
-                </button>
-                <button
-                    onClick={() => setIsModifiersModalOpen(false)}
-                    className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
-            </Modal>
+                currentOffenseCode={currentOffenseCode}
+                selectedOffenses={selectedOffenses}
+                setSelectedOffenses={setSelectedOffenses}
+                handleModifiersSelection={handleModifiersSelection}
+            />
 
-            {/* Global Modifiers Modal */}
-            <Modal
+            <GlobalModifiersModal
                 isOpen={isGlobalModifiersModalOpen}
                 onRequestClose={() => setIsGlobalModifiersModalOpen(false)}
-                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-                <h2 className="text-xl font-bold mb-4">Глобальные модификаторы приговора</h2>
-                <div className="space-y-2">
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            checked={globalModifiers.deal}
-                            onChange={() => setGlobalModifiers((prev) => ({ ...prev, deal: !prev.deal }))}
-                            className="mr-2"
-                        />
-                        <label>Сделка со следствием (уменьшение срока)</label>
-                    </div>
-                    {globalModifiers.deal && (
-                        <div className="flex items-center mt-2">
-                            <label className="mr-2">Уменьшение срока (минуты):</label>
-                            <input
-                                type="number"
-                                min="0"
-                                value={globalModifiers.dealReduction}
-                                onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    setGlobalModifiers((prev) => ({ ...prev, dealReduction: value }));
-                                }}
-                                className="p-1 bg-gray-700 rounded w-16"
-                            />
-                        </div>
-                    )}
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            checked={globalModifiers.recidivism}
-                            onChange={() => setGlobalModifiers((prev) => ({ ...prev, recidivism: !prev.recidivism }))}
-                            className="mr-2"
-                        />
-                        <label>Рецидив (+5 минут за каждый случай)</label>
-                    </div>
-                    {globalModifiers.recidivism && (
-                        <div className="flex items-center mt-2">
-                            <label className="mr-2">Количество случаев рецидива:</label>
-                            <input
-                                type="number"
-                                min="0"
-                                value={globalModifiers.recidivismCount}
-                                onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    setGlobalModifiers((prev) => ({ ...prev, recidivismCount: value }));
-                                }}
-                                className="p-1 bg-gray-700 rounded w-16"
-                            />
-                        </div>
-                    )}
-                </div>
-                <button
-                    onClick={handleGlobalModifiersSelection}
-                    className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-                >
-                    Подтвердить
-                </button>
-                <button
-                    onClick={() => setIsGlobalModifiersModalOpen(false)}
-                    className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
-            </Modal>
+                globalModifiers={globalModifiers}
+                setGlobalModifiers={setGlobalModifiers}
+                handleGlobalModifiersSelection={handleGlobalModifiersSelection}
+            />
 
-            {/* Result Modal */}
-            <Modal
+            <ResultModal
                 isOpen={isResultModalOpen}
                 onRequestClose={() => setIsResultModalOpen(false)}
-                className="bg-gray-800 p-6 rounded-lg max-w-2xl mx-auto mt-20 text-white"
-                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-                <h2 className="text-xl font-bold mb-4">Приговор</h2>
-                <p className="mb-4">Итоговое наказание: <b>{result?.penalty}</b></p>
-                <textarea
-                    className="w-full h-64 p-2 bg-gray-700 rounded mb-4"
-                    value={result?.documentText}
-                    readOnly
-                />
-                <button
-                    onClick={() => copyToClipboard(result?.documentText || '')}
-                    className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-                >
-                    Скопировать в буфер
-                </button>
-                <button
-                    onClick={() => setIsResultModalOpen(false)}
-                    className="mt-2 ml-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
-            </Modal>
+                result={result}
+                copyToClipboard={copyToClipboard}
+            />
         </div>
     );
 };

@@ -11,6 +11,8 @@ import ComplicityModal from './components/ComplicityModal';
 import ModifiersModal from './components/ModifiersModal';
 import GlobalModifiersModal from './components/GlobalModifiersModal';
 import ResultModal from './components/ResultModal';
+import WarningModal from './components/WarningModal';
+import ConfirmModal from './components/ConfirmModal'; // Новый компонент
 import {
     OffenseWithModifiers,
     GlobalModifiers,
@@ -30,6 +32,9 @@ const App: React.FC = () => {
     const [isComplicityModalOpen, setIsComplicityModalOpen] = useState(false);
     const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
     const [isGlobalModifiersModalOpen, setIsGlobalModifiersModalOpen] = useState(false);
+    const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Новое состояние для ConfirmModal
+    const [warningMessage, setWarningMessage] = useState('');
     const [currentOffenseCode, setCurrentOffenseCode] = useState<string | null>(null);
     const [isResultModalOpen, setIsResultModalOpen] = useState(false);
     const [guilt, setGuilt] = useState<string | null>(null);
@@ -51,6 +56,15 @@ const App: React.FC = () => {
     const [baseStartSeconds, setBaseStartSeconds] = useState(0);
     const [objectDetails, setObjectDetails] = useState<ObjectDetailsType>({ fullName: '', position: '' });
     const [result, setResult] = useState<Result | null>(null);
+    const [pendingVerdict, setPendingVerdict] = useState<{
+        totalMinutes: number;
+        finalOffenses: OffenseWithModifiers[];
+        maxSeverity: string;
+        offenseDetails: string[];
+        isLifeSentence: boolean;
+        isDeathPenalty: boolean;
+        xx5Count: number;
+    } | null>(null); // Для временного хранения данных перед подтверждением
 
     // Таймер: обновление каждую секунду
     useEffect(() => {
@@ -77,23 +91,19 @@ const App: React.FC = () => {
 
             const existing = prev.find((o) => o.code === code);
             if (existing) {
-                // Если статья уже выбрана, снимаем её
                 return prev.filter((o) => o.code !== code);
             } else {
-                // Проверяем, есть ли уже статья из того же chapter
                 const sameChapterOffense = prev.find((o) => {
                     const offense = offenses.find((off) => off.code === o.code);
                     return offense && offense.chapter === selectedOffense.chapter;
                 });
 
                 if (sameChapterOffense) {
-                    // Удаляем старую статью из того же chapter и добавляем новую
                     return [
                         ...prev.filter((o) => o.code !== sameChapterOffense.code),
                         { code, modifiers: [] },
                     ];
                 } else {
-                    // Добавляем новую статью
                     return [...prev, { code, modifiers: [] }];
                 }
             }
@@ -150,170 +160,11 @@ const App: React.FC = () => {
         calculateVerdict();
     };
 
-    const calculateVerdict = () => {
-        if (!guilt || !completion || !complicity) return;
-
-        const chapters: Record<string, OffenseWithModifiers[]> = {};
-        selectedOffenses.forEach((offenseWithMods) => {
-            const offense = offenses.find((o) => o.code === offenseWithMods.code);
-            if (offense) {
-                if (!chapters[offense.chapter]) chapters[offense.chapter] = [];
-                chapters[offense.chapter].push(offenseWithMods);
-            }
-        });
-
-        const finalOffenses: OffenseWithModifiers[] = [];
-        Object.values(chapters).forEach((chapterOffenses) => {
-            const mostSevere = chapterOffenses.reduce((prev, curr) => {
-                const prevOffense = offenses.find((o) => o.code === prev.code)!;
-                const currOffense = offenses.find((o) => o.code === curr.code)!;
-                const prevSeverity = Object.keys(severityMinutes).indexOf(prevOffense.severity);
-                const currSeverity = Object.keys(severityMinutes).indexOf(currOffense.severity);
-                return currSeverity > prevSeverity ? curr : prev;
-            });
-            finalOffenses.push(mostSevere);
-        });
-
-        let totalMinutes = 0;
-        let isLifeSentence = false;
-        let isDeathPenalty = false;
-        let maxSeverity: string = 'XX1';
-        const offenseDetails: string[] = [];
-
-        finalOffenses.forEach((offenseWithMods) => {
-            const offense = offenses.find((o) => o.code === offenseWithMods.code)!;
-            let minutes = severityMinutes[offense.severity];
-            const appliedModifiers: string[] = [];
-
-            const severityOrder = ['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'];
-            if (severityOrder.indexOf(offense.severity) > severityOrder.indexOf(maxSeverity)) {
-                maxSeverity = offense.severity;
-            }
-
-            if (guilt === 'Преступление, совершенное по неосторожности') {
-                if (!['Халатность', 'Грубая халатность'].includes(offense.title)) {
-                    minutes = Math.max(0, minutes - 5);
-                    appliedModifiers.push('Преступление, совершенное по неосторожности (-5 минут)');
-                } else {
-                    appliedModifiers.push('Преступление, совершенное по неосторожности (не применимо для данной статьи)');
-                }
-            }
-
-            if (completion === 'Покушение на преступление') {
-                appliedModifiers.push('Покушение на преступление (полное наказание)');
-            } else if (completion === 'Приготовление к преступлению') {
-                if (['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity)) {
-                    appliedModifiers.push('Приготовление к преступлению (полное наказание)');
-                } else {
-                    minutes = 0;
-                    appliedModifiers.push('Приготовление к преступлению (снятие обвинения)');
-                }
-            } else if (completion === 'Безуспешный добровольный отказ от преступления') {
-                minutes = Math.max(0, minutes - 5);
-                appliedModifiers.push('Безуспешный добровольный отказ от преступления (-5 минут)');
-            } else if (completion === 'Успешный добровольный отказ от преступления') {
-                minutes = 0;
-                appliedModifiers.push('Успешный добровольный отказ от преступления (снятие обвинений)');
-            }
-
-            if (complicity === 'Организатор') {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
-                if (complicity !== 'Исполнитель') {
-                    minutes += 10;
-                    appliedModifiers.push('Организатор (+10 минут)');
-                } else {
-                    appliedModifiers.push('Организатор (не применимо, так как исполнитель является организатором)');
-                }
-            } else {
-                appliedModifiers.push(`${complicity} (полное наказание)`);
-            }
-
-            if (offenseWithMods.modifiers.includes('Гипноз')) {
-                minutes = 0;
-                appliedModifiers.push('Гипноз (снятие обвинений)');
-            }
-            if (offenseWithMods.modifiers.includes('Крайняя необходимость')) {
-                minutes = 0;
-                appliedModifiers.push('Крайняя необходимость (снятие обвинений)');
-            }
-            if (offenseWithMods.modifiers.includes('Допустимая самооборона')) {
-                minutes = 0;
-                appliedModifiers.push('Допустимая самооборона (снятие обвинений)');
-            }
-            if (offenseWithMods.modifiers.includes('Манипулирование синтетиками')) {
-                appliedModifiers.push('Манипулирование синтетиками (полное наказание)');
-            }
-            if (offenseWithMods.modifiers.includes('Должностное преступление')) {
-                minutes += 10;
-                appliedModifiers.push('Должностное преступление (+10 минут)');
-            }
-            if (offenseWithMods.modifiers.includes('Преступление против должностного лица')) {
-                if (offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X')) {
-                    minutes += 10;
-                    appliedModifiers.push('Преступление против должностного лица (+10 минут)');
-                } else {
-                    appliedModifiers.push('Преступление против должностного лица (не применимо для данной статьи)');
-                }
-            }
-            if (offenseWithMods.modifiers.includes('Расизм')) {
-                minutes += 10;
-                appliedModifiers.push('Расизм (+10 минут)');
-            }
-            if (offenseWithMods.modifiers.includes('Явка с повинной')) {
-                minutes = Math.max(0, minutes - 5);
-                appliedModifiers.push('Явка с повинной (-5 минут)');
-            }
-
-            if (offense.severity === 'XX5') isLifeSentence = true;
-            if (offense.severity === 'XX6') isDeathPenalty = true;
-
-            totalMinutes += minutes;
-            offenseDetails.push(
-                `[${offense.code} - ${offense.title}], модификаторы: ${
-                    appliedModifiers.length > 0 ? appliedModifiers.join(', ') : 'отсутствуют'
-                }`
-            );
-        });
-
-        if (globalModifiers.deal && globalModifiers.dealReduction > 0) {
-            totalMinutes = Math.max(0, totalMinutes - globalModifiers.dealReduction);
-            offenseDetails.push(`Сделка со следствием (-${globalModifiers.dealReduction} минут)`);
-        }
-        if (globalModifiers.recidivism && globalModifiers.recidivismCount > 0) {
-            const recidivismMinutes = globalModifiers.recidivismCount * 5;
-            totalMinutes += recidivismMinutes;
-            offenseDetails.push(`Рецидив (+${recidivismMinutes} минут за ${globalModifiers.recidivismCount} случаев)`);
-        }
-
-        let finalPenalty = '';
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
-            finalPenalty = 'Снятие обвинений';
-        } else if (isDeathPenalty) {
-            finalPenalty = 'Высшая мера наказания';
-        } else if (isLifeSentence) {
-            finalPenalty = 'Пожизненное заключение';
-        } else {
-            finalPenalty = `${totalMinutes} минут тюремного заключения`;
-        }
-
-        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
-            disciplinaryPenalty = 'Не предусмотрено';
-        }
-
+    const finalizeVerdict = (
+        finalPenalty: string,
+        disciplinaryPenalty: string,
+        offenseDetails: string[]
+    ) => {
         const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -365,6 +216,392 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         setIsResultModalOpen(true);
     };
 
+    const calculateVerdict = () => {
+        if (!guilt || !completion || !complicity) return;
+
+        const chapters: Record<string, OffenseWithModifiers[]> = {};
+        selectedOffenses.forEach((offenseWithMods) => {
+            const offense = offenses.find((o) => o.code === offenseWithMods.code);
+            if (offense) {
+                if (!chapters[offense.chapter]) chapters[offense.chapter] = [];
+                chapters[offense.chapter].push(offenseWithMods);
+            }
+        });
+
+        const finalOffenses: OffenseWithModifiers[] = [];
+        Object.values(chapters).forEach((chapterOffenses) => {
+            const mostSevere = chapterOffenses.reduce((prev, curr) => {
+                const prevOffense = offenses.find((o) => o.code === prev.code)!;
+                const currOffense = offenses.find((o) => o.code === curr.code)!;
+                const prevSeverity = Object.keys(severityMinutes).indexOf(prevOffense.severity);
+                const currSeverity = Object.keys(severityMinutes).indexOf(currOffense.severity);
+                return currSeverity > prevSeverity ? curr : prev;
+            });
+            finalOffenses.push(mostSevere);
+        });
+
+        let totalMinutes = 0;
+        let isLifeSentence = false;
+        let isDeathPenalty = false;
+        let maxSeverity: string = 'XX1';
+        const offenseDetails: string[] = [];
+
+        const xx5Count = finalOffenses.filter((offenseWithMods) => {
+            const offense = offenses.find((o) => o.code === offenseWithMods.code)!;
+            return offense.severity === 'XX5';
+        }).length;
+
+        finalOffenses.forEach((offenseWithMods) => {
+            const offense = offenses.find((o) => o.code === offenseWithMods.code)!;
+            let minutes = severityMinutes[offense.severity];
+            const appliedModifiers: string[] = [];
+
+            const severityOrder = ['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'];
+            if (severityOrder.indexOf(offense.severity) > severityOrder.indexOf(maxSeverity)) {
+                maxSeverity = offense.severity;
+            }
+
+            if (guilt === 'Преступление, совершенное по неосторожности') {
+                if (!['Халатность', 'Грубая халатность'].includes(offense.title)) {
+                    minutes = Math.max(0, minutes - 5);
+                    appliedModifiers.push('Преступление, совершенное по неосторожности (-5 минут)');
+                }
+            }
+
+            if (completion === 'Покушение на преступление') {
+                appliedModifiers.push('Покушение на преступление (полное наказание)');
+            } else if (completion === 'Приготовление к преступлению') {
+                if (['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity)) {
+                    appliedModifiers.push('Приготовление к преступлению (полное наказание)');
+                } else {
+                    minutes = 0;
+                    appliedModifiers.push('Приготовление к преступлению (снятие обвинения)');
+                }
+            } else if (completion === 'Безуспешный добровольный отказ от преступления') {
+                minutes = Math.max(0, minutes - 5);
+                appliedModifiers.push('Безуспешный добровольный отказ от преступления (-5 минут)');
+            } else if (completion === 'Успешный добровольный отказ от преступления') {
+                minutes = 0;
+                appliedModifiers.push('Успешный добровольный отказ от преступления (снятие обвинений)');
+            }
+
+            if (complicity === 'Организатор') {
+                minutes += 10;
+                appliedModifiers.push('Организатор (+10 минут)');
+            } else {
+                appliedModifiers.push(`${complicity} (полное наказание)`);
+            }
+
+            if (offenseWithMods.modifiers.includes('Гипноз')) {
+                minutes = 0;
+                appliedModifiers.push('Гипноз (снятие обвинений)');
+            }
+            if (offenseWithMods.modifiers.includes('Крайняя необходимость')) {
+                minutes = 0;
+                appliedModifiers.push('Крайняя необходимость (снятие обвинений)');
+            }
+            if (offenseWithMods.modifiers.includes('Допустимая самооборона')) {
+                minutes = 0;
+                appliedModifiers.push('Допустимая самооборона (снятие обвинений)');
+            }
+            if (offenseWithMods.modifiers.includes('Манипулирование синтетиками')) {
+                appliedModifiers.push('Манипулирование синтетиками (полное наказание)');
+            }
+            if (offenseWithMods.modifiers.includes('Должностное преступление')) {
+                minutes += 10;
+                appliedModifiers.push('Должностное преступление (+10 минут)');
+            }
+            if (offenseWithMods.modifiers.includes('Преступление против должностного лица')) {
+                if (offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X')) {
+                    minutes += 10;
+                    appliedModifiers.push('Преступление против должностного лица (+10 минут)');
+                }
+            }
+            if (offenseWithMods.modifiers.includes('Расизм')) {
+                minutes += 10;
+                appliedModifiers.push('Расизм (+10 минут)');
+            }
+            if (offenseWithMods.modifiers.includes('Явка с повинной')) {
+                minutes = Math.max(0, minutes - 5);
+                appliedModifiers.push('Явка с повинной (-5 минут)');
+            }
+
+            if (offense.severity === 'XX5') isLifeSentence = true;
+            if (offense.severity === 'XX6') isDeathPenalty = true;
+
+            totalMinutes += minutes;
+            offenseDetails.push(
+                `[${offense.code} - ${offense.title}], модификаторы: ${
+                    appliedModifiers.length > 0 ? appliedModifiers.join(', ') : 'отсутствуют'
+                }`
+            );
+        });
+
+        if (globalModifiers.deal && globalModifiers.dealReduction > 0) {
+            totalMinutes = Math.max(0, totalMinutes - globalModifiers.dealReduction);
+            offenseDetails.push(`Сделка со следствием (-${globalModifiers.dealReduction} минут)`);
+        }
+        if (globalModifiers.recidivism && globalModifiers.recidivismCount > 0) {
+            const recidivismMinutes = globalModifiers.recidivismCount * 5;
+            totalMinutes += recidivismMinutes;
+            offenseDetails.push(`Рецидив (+${recidivismMinutes} минут за ${globalModifiers.recidivismCount} случаев)`);
+        }
+
+        let finalPenalty = '';
+        if (
+            guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
+            finalPenalty = 'Снятие обвинений';
+        } else if (isDeathPenalty) {
+            finalPenalty = 'Высшая мера наказания';
+        } else if (isLifeSentence || totalMinutes >= 75) {
+            finalPenalty = 'Пожизненное заключение';
+            if (xx5Count >= 2) {
+                finalPenalty = 'Высшая мера наказания';
+            }
+        } else if (totalMinutes <= 5 && totalMinutes > 0) {
+            // Сохраняем данные для последующего подтверждения
+            setPendingVerdict({
+                totalMinutes,
+                finalOffenses,
+                maxSeverity,
+                offenseDetails,
+                isLifeSentence,
+                isDeathPenalty,
+                xx5Count,
+            });
+            setIsConfirmModalOpen(true);
+            return; // Прерываем выполнение до подтверждения
+        } else {
+            finalPenalty = `${totalMinutes} минут тюремного заключения`;
+        }
+
+        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+        if (
+            guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
+            disciplinaryPenalty = 'Не предусмотрено';
+        }
+
+        // Проверка полномочий
+        const position = settings.position.toLowerCase();
+        let canProceed = true;
+        let warningMessage = '';
+
+        if (finalPenalty === 'Предупреждение') {
+            if (position.includes('кадет')) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о выдаче предупреждения может любой сотрудник службы безопасности, исключая кадетов, а также все вышестоящие лица.';
+            }
+        } else if (finalPenalty.includes('минут тюремного заключения')) {
+            if (
+                position.includes('кадет') ||
+                (!position.includes('смотритель') &&
+                    !position.includes('глава службы безопасности') &&
+                    !position.includes('капитан'))
+            ) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о временном заключении могут смотритель и все вышестоящие лица.';
+            }
+        } else if (finalPenalty === 'Пожизненное заключение') {
+            if (
+                position.includes('кадет') ||
+                position.includes('смотритель') ||
+                (!position.includes('глава службы безопасности') && !position.includes('капитан'))
+            ) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о пожизненном лишении свободы могут глава службы безопасности и все вышестоящие лица.';
+            }
+        } else if (finalPenalty === 'Высшая мера наказания') {
+            if (
+                position.includes('кадет') ||
+                position.includes('смотритель') ||
+                position.includes('глава службы безопасности') ||
+                !position.includes('капитан')
+            ) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о высшей мере наказания могут капитан и все вышестоящие лица.';
+            }
+        }
+
+        if (!canProceed) {
+            setWarningMessage(warningMessage);
+            setPendingVerdict({
+                totalMinutes,
+                finalOffenses,
+                maxSeverity,
+                offenseDetails,
+                isLifeSentence,
+                isDeathPenalty,
+                xx5Count,
+            });
+            setIsWarningModalOpen(true);
+            return;
+        }
+
+        finalizeVerdict(finalPenalty, disciplinaryPenalty, offenseDetails);
+    };
+
+    const handleConfirmReplace = (replace: boolean) => {
+        if (!pendingVerdict) return;
+
+        const {
+            totalMinutes,
+            maxSeverity,
+            offenseDetails,
+            isLifeSentence,
+            isDeathPenalty,
+            xx5Count,
+        } = pendingVerdict;
+
+        let finalPenalty = '';
+        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+
+        if (
+            guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
+            finalPenalty = 'Снятие обвинений';
+            disciplinaryPenalty = 'Не предусмотрено';
+        } else if (isDeathPenalty) {
+            finalPenalty = 'Высшая мера наказания';
+        } else if (isLifeSentence || totalMinutes >= 75) {
+            finalPenalty = 'Пожизненное заключение';
+            if (xx5Count >= 2) {
+                finalPenalty = 'Высшая мера наказания';
+            }
+        } else if (totalMinutes <= 5 && totalMinutes > 0) {
+            finalPenalty = replace ? 'Предупреждение' : `${totalMinutes} минут тюремного заключения`;
+        } else {
+            finalPenalty = `${totalMinutes} минут тюремного заключения`;
+        }
+
+        if (
+            guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
+            disciplinaryPenalty = 'Не предусмотрено';
+        }
+
+        // Проверка полномочий
+        const position = settings.position.toLowerCase();
+        let canProceed = true;
+        let warningMessage = '';
+
+        if (finalPenalty === 'Предупреждение') {
+            if (position.includes('кадет')) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о выдаче предупреждения может любой сотрудник службы безопасности, исключая кадетов, а также все вышестоящие лица.';
+            }
+        } else if (finalPenalty.includes('минут тюремного заключения')) {
+            if (
+                position.includes('кадет') ||
+                (!position.includes('смотритель') &&
+                    !position.includes('глава службы безопасности') &&
+                    !position.includes('капитан'))
+            ) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о временном заключении могут смотритель и все вышестоящие лица.';
+            }
+        } else if (finalPenalty === 'Пожизненное заключение') {
+            if (
+                position.includes('кадет') ||
+                position.includes('смотритель') ||
+                (!position.includes('глава службы безопасности') && !position.includes('капитан'))
+            ) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о пожизненном лишении свободы могут глава службы безопасности и все вышестоящие лица.';
+            }
+        } else if (finalPenalty === 'Высшая мера наказания') {
+            if (
+                position.includes('кадет') ||
+                position.includes('смотритель') ||
+                position.includes('глава службы безопасности') ||
+                !position.includes('капитан')
+            ) {
+                canProceed = false;
+                warningMessage = 'Предупреждение: Вынести приговор о высшей мере наказания могут капитан и все вышестоящие лица.';
+            }
+        }
+
+        setIsConfirmModalOpen(false);
+
+        if (!canProceed) {
+            setWarningMessage(warningMessage);
+            setIsWarningModalOpen(true);
+            return;
+        }
+
+        finalizeVerdict(finalPenalty, disciplinaryPenalty, offenseDetails);
+        setPendingVerdict(null);
+    };
+
+    const handleForceVerdict = () => {
+        if (!pendingVerdict) return;
+
+        const {
+            totalMinutes,
+            maxSeverity,
+            offenseDetails,
+            isLifeSentence,
+            isDeathPenalty,
+            xx5Count,
+        } = pendingVerdict;
+
+        let finalPenalty = '';
+        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+
+        if (
+            guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
+            finalPenalty = 'Снятие обвинений';
+            disciplinaryPenalty = 'Не предусмотрено';
+        } else if (isDeathPenalty) {
+            finalPenalty = 'Высшая мера наказания';
+        } else if (isLifeSentence || totalMinutes >= 75) {
+            finalPenalty = 'Пожизненное заключение';
+            if (xx5Count >= 2) {
+                finalPenalty = 'Высшая мера наказания';
+            }
+        } else if (totalMinutes <= 5 && totalMinutes > 0) {
+            finalPenalty = 'Предупреждение'; // Предполагаем, что замена уже подтверждена ранее
+        } else {
+            finalPenalty = `${totalMinutes} минут тюремного заключения`;
+        }
+
+        if (
+            guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
+        ) {
+            disciplinaryPenalty = 'Не предусмотрено';
+        }
+
+        setIsWarningModalOpen(false);
+        finalizeVerdict(finalPenalty, disciplinaryPenalty, offenseDetails);
+        setPendingVerdict(null);
+    };
+
     const copyToClipboard = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -378,7 +615,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold font-anta">NanoTrasen Warden Helper</h1>
+                <h1 className="text-2xl font-bold font-anta>">NanoTrasen Warden Helper</h1>
                 <button
                     onClick={() => setIsSettingsModalOpen(true)}
                     className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
@@ -421,18 +658,21 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 isOpen={isGuiltModalOpen}
                 onRequestClose={() => setIsGuiltModalOpen(false)}
                 handleGuiltSelection={handleGuiltSelection}
+                selectedOffenses={selectedOffenses}
             />
 
             <CompletionModal
                 isOpen={isCompletionModalOpen}
                 onRequestClose={() => setIsCompletionModalOpen(false)}
                 handleCompletionSelection={handleCompletionSelection}
+                selectedOffenses={selectedOffenses}
             />
 
             <ComplicityModal
                 isOpen={isComplicityModalOpen}
                 onRequestClose={() => setIsComplicityModalOpen(false)}
                 handleComplicitySelection={handleComplicitySelection}
+                selectedOffenses={selectedOffenses}
             />
 
             <ModifiersModal
@@ -457,6 +697,20 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 onRequestClose={() => setIsResultModalOpen(false)}
                 result={result}
                 copyToClipboard={copyToClipboard}
+            />
+
+            <WarningModal
+                isOpen={isWarningModalOpen}
+                onRequestClose={() => setIsWarningModalOpen(false)}
+                onForceVerdict={handleForceVerdict}
+                message={warningMessage}
+            />
+
+            <ConfirmModal
+                isOpen={isConfirmModalOpen}
+                onRequestClose={() => setIsConfirmModalOpen(false)}
+                onConfirm={handleConfirmReplace}
+                minutes={pendingVerdict?.totalMinutes || 0}
             />
         </div>
     );

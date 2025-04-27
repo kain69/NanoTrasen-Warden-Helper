@@ -1,10 +1,12 @@
 import React from 'react';
 import Modal from 'react-modal';
+import { OffenseWithModifiers } from '../types';
 
 interface ComplicityModalProps {
     isOpen: boolean;
     onRequestClose: () => void;
     handleComplicitySelection: (complicityType: string) => void;
+    selectedOffenses: OffenseWithModifiers[];
 }
 
 const ComplicityModal: React.FC<ComplicityModalProps> = ({

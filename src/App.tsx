@@ -296,8 +296,20 @@ const App: React.FC = () => {
         }
 
         const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
-        const currentTime = totalSeconds.toString();
-        const currentDate = '27.04.3025';
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        console.log(hours);
+        console.log(minutes);
+        console.log(seconds);
+        console.log(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        const currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        const currentDate = new Date();
+        currentDate.setFullYear(currentDate.getFullYear() + 1000);
+        currentDate.setFullYear(currentDate.getFullYear() + 1000);
+        const gameDate = currentDate.toLocaleDateString('ru-RU');
+
         const documentText = `
 [color=#982a2d]███░███░░░░██░░░░[/color]
 [color=#982a2d]░██░████░░░██░░░░[/color]        [head=3]Бланк документа[/head]
@@ -307,7 +319,7 @@ const App: React.FC = () => {
 =============================================
                                        ПРИГОВОР
 =============================================
-Время от начала смены и дата: [bold]${currentTime}[/bold], [bold]${currentDate}[/bold]
+Время от начала смены и дата: [bold]${currentTime}[/bold], [bold]${gameDate}[/bold]
 Составитель документа: [bold]${settings.fullName}[/bold]
 Должность составителя: [bold]${settings.position}[/bold]
 

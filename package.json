@@ -2,6 +2,7 @@
   "name": "nanotrasen-warden-helper",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://kain69.github.io/NanoTrasen-Warden-Helper",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -30,3 +30,7 @@
   visibility: visible;
   opacity: 1;
 }
+
+.font-anta {
+  font-family: 'Anta', sans-serif !important;
+}

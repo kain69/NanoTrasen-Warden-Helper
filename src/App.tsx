@@ -344,7 +344,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold">Калькулятор приговоров</h1>
+                <h1 className="text-2xl font-bold font-anta">NanoTrasen Warden Helper</h1>
                 <button
                     onClick={() => setIsSettingsModalOpen(true)}
                     className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"

@@ -13,17 +13,17 @@ const OffensesTable: React.FC<OffensesTableProps> = ({ selectedOffenses, toggleO
             <table className="w-full border-collapse">
                 <thead>
                 <tr>
-                    <th className="bg-gray-800 p-2" rowSpan={2}>Раздел</th>
-                    <th className="bg-gray-800 p-2" rowSpan={2}>Глава</th>
-                    <th className="bg-gray-800 p-2" colSpan={6}>Статьи</th>
+                    <th className="bg-gray-800 p-2 border border-gray-700" rowSpan={2}>Раздел</th>
+                    <th className="bg-gray-800 p-2 border border-gray-700" rowSpan={2}>Глава</th>
+                    <th className="bg-gray-800 p-2 border border-gray-700" colSpan={6}>Статьи</th>
                 </tr>
                 <tr>
-                    <th className="bg-green-800 p-2">XX1<br />Незначительные правонарушения</th>
-                    <th className="bg-yellow-800 p-2">XX2<br />Легкие правонарушения</th>
-                    <th className="bg-orange-800 p-2">XX3<br />Средние правонарушения</th>
-                    <th className="bg-red-800 p-2">XX4<br />Тяжкие правонарушения</th>
-                    <th className="bg-red-900 p-2">XX5<br />Особо тяжкие правонарушения</th>
-                    <th className="bg-black p-2">XX6<br />Критические правонарушения</th>
+                    <th className="bg-green-800 p-2 border border-gray-700">XX1<br />Незначительные правонарушения</th>
+                    <th className="bg-yellow-800 p-2 border border-gray-700">XX2<br />Легкие правонарушения</th>
+                    <th className="bg-orange-800 p-2 border border-gray-700">XX3<br />Средние правонарушения</th>
+                    <th className="bg-red-800 p-2 border border-gray-700">XX4<br />Тяжкие правонарушения</th>
+                    <th className="bg-red-900 p-2 border border-gray-700">XX5<br />Особо тяжкие правонарушения</th>
+                    <th className="bg-black p-2 border border-gray-700">XX6<br />Критические правонарушения</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -33,11 +33,11 @@ const OffensesTable: React.FC<OffensesTableProps> = ({ selectedOffenses, toggleO
                         return (
                             <tr key={chapter}>
                                 {idx === 0 && (
-                                    <th className="bg-gray-800 p-2" rowSpan={section.chapters.length}>
+                                    <th className="bg-gray-800 p-2 border border-gray-700" rowSpan={section.chapters.length}>
                                         {section.section}
                                     </th>
                                 )}
-                                <th className="bg-gray-800 p-2">{chapter}</th>
+                                <th className="bg-gray-800 p-2 border border-gray-700">{chapter}</th>
                                 {['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'].map((severity) => {
                                     const offense = chapterOffenses.find((o) => o.severity === severity);
                                     const isSelected = offense && selectedOffenses.some((o) => o.code === offense.code);

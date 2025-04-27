@@ -21,7 +21,7 @@ const SelectedOffensesList: React.FC<SelectedOffensesListProps> = ({
                     {selectedOffenses.map((offenseWithMods) => {
                         const offense = offenses.find((o) => o.code === offenseWithMods.code);
                         return (
-                            <li key={offenseWithMods.code}>
+                            <li key={offenseWithMods.code} className="mb-1">
                                 {offense?.code} - {offense?.title}
                                 <button
                                     onClick={() => toggleOffense(offenseWithMods.code)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Modal from 'react-modal';
 
 Modal.setAppElement('#root');
@@ -9,6 +9,18 @@ interface Offense {
     description: string;
     chapter: string;
     severity: string;
+}
+
+interface OffenseWithModifiers {
+    code: string;
+    modifiers: string[];
+}
+
+interface GlobalModifiers {
+    deal: boolean;
+    dealReduction: number;
+    recidivism: boolean;
+    recidivismCount: number;
 }
 
 const offenses: Offense[] = [
@@ -55,7 +67,7 @@ const offenses: Offense[] = [
     { code: '415', title: 'Крупное мошенничество', description: 'Хищение или приобретение права редкое или важного имущество...', chapter: '41X', severity: 'XX5' },
     { code: '416', title: 'Террористический акт', description: 'Действия, направленные на дестабилизацию деятельности органов власти...', chapter: '41X', severity: 'XX6' },
     { code: '421', title: 'Необоснованное посещение технических помещений, космоса', description: 'Нахождение на территории технических помещений...', chapter: '42X', severity: 'XX1' },
-    { code: '422', title: 'Проникновение на территорию отдела', description: 'Нахождение на территории закрытого отдела...', chapter: '42X', severity: 'XX2' },
+    { code: '422', title: 'Проникновение на территорию отделов', description: 'Нахождение на территории закрытого отдела...', chapter: '42X', severity: 'XX2' },
     { code: '423', title: 'Проникновение в стратегическую точку', description: 'Нахождение на территории стратегической точки...', chapter: '42X', severity: 'XX3' },
     { code: '424', title: 'Проникновение в защищенную стратегическую точку', description: 'Нахождение на территории защищённой стратегической точки...', chapter: '42X', severity: 'XX4' },
     { code: '425', title: 'Незаконная эвакуация с территории комплекса', description: 'Несанкционированный вылет с территории действия блюспейс маяка...', chapter: '42X', severity: 'XX5' },
@@ -68,15 +80,6 @@ const offenses: Offense[] = [
     { code: '436', title: 'Незаконное владение террористическими средствами', description: 'Незаконное владение предметами со свойствами массового поражения...', chapter: '43X', severity: 'XX6' },
 ];
 
-const severityPenalties: Record<string, string> = {
-    XX1: '5 минут тюремного заключения',
-    XX2: '10 минут тюремного заключения',
-    XX3: '15 минут тюремного заключения',
-    XX4: '25 минут тюремного заключения',
-    XX5: 'Пожизненное заключение',
-    XX6: 'Высшая мера наказания',
-};
-
 const severityMinutes: Record<string, number> = {
     XX1: 5,
     XX2: 10,
@@ -86,20 +89,119 @@ const severityMinutes: Record<string, number> = {
     XX6: Infinity,
 };
 
+const disciplinaryPenalties: Record<string, string> = {
+    XX1: 'Не предусмотрено',
+    XX2: 'На усмотрение главы отдела',
+    XX3: 'На усмотрение главы отдела',
+    XX4: 'На усмотрение главы отдела',
+    XX5: 'Увольнение',
+    XX6: 'Увольнение',
+};
+
+// Определяем модификаторы как объекты с названием и описанием
+const modifierOptions: { name: string; description: string }[] = [
+    { name: 'Гипноз', description: 'снятие обвинений' },
+    { name: 'Крайняя необходимость', description: 'снятие обвинений' },
+    { name: 'Допустимая самооборона', description: 'снятие обвинений' },
+    { name: 'Манипулирование синтетиками', description: 'полное наказание' },
+    { name: 'Должностное преступление', description: '+10 минут к наказанию' },
+    { name: 'Преступление против должностного лица', description: '+10 минут к наказанию' },
+    { name: 'Расизм', description: '+10 минут к наказанию' },
+    { name: 'Явка с повинной', description: '-5 минут к наказанию' },
+];
+
 const App: React.FC = () => {
-    const [selectedOffenses, setSelectedOffenses] = useState<string[]>([]);
+    const [selectedOffenses, setSelectedOffenses] = useState<OffenseWithModifiers[]>([]);
     const [isGuiltModalOpen, setIsGuiltModalOpen] = useState(false);
+    const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+    const [isComplicityModalOpen, setIsComplicityModalOpen] = useState(false);
     const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
+    const [isGlobalModifiersModalOpen, setIsGlobalModifiersModalOpen] = useState(false);
+    const [currentOffenseCode, setCurrentOffenseCode] = useState<string | null>(null);
     const [isResultModalOpen, setIsResultModalOpen] = useState(false);
     const [guilt, setGuilt] = useState<string | null>(null);
-    const [modifiers, setModifiers] = useState<string[]>([]);
+    const [completion, setCompletion] = useState<string | null>(null);
+    const [complicity, setComplicity] = useState<string | null>(null);
+    const [globalModifiers, setGlobalModifiers] = useState<GlobalModifiers>({
+        deal: false,
+        dealReduction: 0,
+        recidivism: false,
+        recidivismCount: 0,
+    });
     const [settings, setSettings] = useState({
         fullName: '',
         position: 'Смотритель',
         station: '',
     });
     const [timer, setTimer] = useState({ elapsedSeconds: 0, running: false });
+    const [startTimeInput, setStartTimeInput] = useState('');
+    const [baseStartSeconds, setBaseStartSeconds] = useState(0);
     const [objectDetails, setObjectDetails] = useState({ fullName: '', position: '' });
+
+    // Парсинг времени из формата чч:мм:сс в секунды
+    const parseTimeToSeconds = (time: string): number => {
+        const [hours, minutes, seconds] = time.split(':').map(Number);
+        return (hours * 3600) + (minutes * 60) + seconds;
+    };
+
+    // Форматирование секунд в формат чч:мм:сс
+    const formatTime = (seconds: number): string => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes
+            .toString()
+            .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Обработка ввода времени
+    const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value;
+        const cursorPosition = e.target.selectionStart || 0;
+
+        // Убираем всё, кроме цифр
+        let value = rawValue.replace(/\D/g, '');
+
+        // Ограничиваем до 6 цифр
+        if (value.length > 6) {
+            value = value.slice(0, 6);
+        }
+
+        // Формируем отформатированное значение
+        let formatted = '';
+        if (value.length > 0) {
+            formatted += value.substring(0, 2);
+        }
+        if (value.length > 2) {
+            formatted += ':' + value.substring(2, 4);
+        }
+        if (value.length > 4) {
+            formatted += ':' + value.substring(4, 6);
+        }
+
+        setStartTimeInput(formatted);
+
+        // После обновления переместить курсор на правильную позицию
+        setTimeout(() => {
+            if (inputRef.current) {
+                let newCursorPos = cursorPosition;
+
+                // Корректируем позицию с учётом двоеточий
+                if (cursorPosition === 2 || cursorPosition === 5) {
+                    newCursorPos += 1;
+                } else if (cursorPosition > 2 && cursorPosition <= 4) {
+                    newCursorPos += 1;
+                } else if (cursorPosition > 4) {
+                    newCursorPos += 2;
+                }
+
+                inputRef.current.selectionStart = newCursorPos;
+                inputRef.current.selectionEnd = newCursorPos;
+            }
+        }, 0);
+    };
 
     // Таймер: обновление каждую секунду
     useEffect(() => {
@@ -118,24 +220,29 @@ const App: React.FC = () => {
     }, [timer.running]);
 
     const startTimer = () => {
+        const newStartSeconds = parseTimeToSeconds(startTimeInput);
+        setBaseStartSeconds(newStartSeconds);
         setTimer({ elapsedSeconds: 0, running: true });
     };
 
-    const formatTime = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes
-            .toString()
-            .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
+    // Вычисляем общее время (стартовое время при последнем старте + прошедшее по таймеру)
+    const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
+    const currentTime = formatTime(totalSeconds);
 
     const toggleOffense = (code: string) => {
-        setSelectedOffenses((prev) =>
-            prev.includes(code)
-                ? prev.filter((c) => c !== code)
-                : [...prev, code]
-        );
+        setSelectedOffenses((prev) => {
+            const existing = prev.find((o) => o.code === code);
+            if (existing) {
+                return prev.filter((o) => o.code !== code);
+            } else {
+                return [...prev, { code, modifiers: [] }];
+            }
+        });
+    };
+
+    const openModifiersModal = (code: string) => {
+        setCurrentOffenseCode(code);
+        setIsModifiersModalOpen(true);
     };
 
     const openGuiltModal = () => {
@@ -149,21 +256,49 @@ const App: React.FC = () => {
     const handleGuiltSelection = (guiltType: string) => {
         setGuilt(guiltType);
         setIsGuiltModalOpen(false);
-        setIsModifiersModalOpen(true);
+        setIsCompletionModalOpen(true);
+    };
+
+    const handleCompletionSelection = (completionType: string) => {
+        setCompletion(completionType);
+        setIsCompletionModalOpen(false);
+        setIsComplicityModalOpen(true);
+    };
+
+    const handleComplicitySelection = (complicityType: string) => {
+        setComplicity(complicityType);
+        setIsComplicityModalOpen(false);
+        // Открываем модальное окно модификаторов для первой статьи
+        if (selectedOffenses.length > 0) {
+            setCurrentOffenseCode(selectedOffenses[0].code);
+            setIsModifiersModalOpen(true);
+        }
     };
 
     const handleModifiersSelection = () => {
         setIsModifiersModalOpen(false);
+        // Переходим к следующей статье или открываем модалку глобальных модификаторов
+        const currentIndex = selectedOffenses.findIndex((o) => o.code === currentOffenseCode);
+        if (currentIndex < selectedOffenses.length - 1) {
+            setCurrentOffenseCode(selectedOffenses[currentIndex + 1].code);
+            setIsModifiersModalOpen(true);
+        } else {
+            setIsGlobalModifiersModalOpen(true);
+        }
+    };
+
+    const handleGlobalModifiersSelection = () => {
+        setIsGlobalModifiersModalOpen(false);
         calculateVerdict();
     };
 
     const calculateVerdict = () => {
-        if (!guilt) return;
+        if (!guilt || !completion || !complicity) return;
 
         // Group offenses by chapter and select the most severe per chapter
         const chapters: Record<string, Offense[]> = {};
-        selectedOffenses.forEach((code) => {
-            const offense = offenses.find((o) => o.code === code);
+        selectedOffenses.forEach((offenseWithMods) => {
+            const offense = offenses.find((o) => o.code === offenseWithMods.code);
             if (offense) {
                 if (!chapters[offense.chapter]) chapters[offense.chapter] = [];
                 chapters[offense.chapter].push(offense);
@@ -180,36 +315,98 @@ const App: React.FC = () => {
             finalOffenses.push(mostSevere);
         });
 
-        // Calculate total penalty
+        // Calculate total penalty and determine disciplinary penalty
         let totalMinutes = 0;
         let isLifeSentence = false;
         let isDeathPenalty = false;
+        let maxSeverity: string = 'XX1';
         const offenseDetails: string[] = [];
 
         finalOffenses.forEach((offense) => {
+            const offenseWithMods = selectedOffenses.find((o) => o.code === offense.code)!;
             let minutes = severityMinutes[offense.severity];
-            let appliedModifiers: string[] = [];
+            const appliedModifiers: string[] = [];
+
+            // Update maxSeverity for disciplinary penalty
+            const severityOrder = ['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'];
+            if (severityOrder.indexOf(offense.severity) > severityOrder.indexOf(maxSeverity)) {
+                maxSeverity = offense.severity;
+            }
 
             // Apply guilt modifier
-            if (guilt === 'по неосторожности') {
-                minutes = Math.max(0, minutes - 5);
-                appliedModifiers.push('Преступление, совершенное по неосторожности (-5 минут)');
+            if (guilt === 'Преступление, совершенное по неосторожности') {
+                if (!['Халатность', 'Грубая халатность'].includes(offense.title)) {
+                    minutes = Math.max(0, minutes - 5);
+                    appliedModifiers.push('Преступление, совершенное по неосторожности (-5 минут)');
+                } else {
+                    appliedModifiers.push('Преступление, совершенное по неосторожности (не применимо для данной статьи)');
+                }
             }
 
-            // Apply other modifiers
-            if (modifiers.includes('Допустимая самооборона')) {
+            // Apply completion modifier
+            if (completion === 'Покушение на преступление') {
+                minutes = minutes;
+                appliedModifiers.push('Покушение на преступление (полное наказание)');
+            } else if (completion === 'Приготовление к преступлению') {
+                if (['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity)) {
+                    appliedModifiers.push('Приготовление к преступлению (полное наказание)');
+                } else {
+                    minutes = 0;
+                    appliedModifiers.push('Приготовление к преступлению (снятие обвинения)');
+                }
+            } else if (completion === 'Безуспешный добровольный отказ от преступления') {
+                minutes = Math.max(0, minutes - 5);
+                appliedModifiers.push('Безуспешный добровольный отказ от преступления (-5 минут)');
+            } else if (completion === 'Успешный добровольный отказ от преступления') {
                 minutes = 0;
-                appliedModifiers.push('Допустимая самооборона (снятие наказания)');
+                appliedModifiers.push('Успешный добровольный отказ от преступления (снятие обвинений)');
             }
-            if (modifiers.includes('Должностное преступление')) {
+
+            // Apply complicity modifier
+            if (complicity === 'Организатор') {
+                if (complicity !== 'Исполнитель') {
+                    minutes += 10;
+                    appliedModifiers.push('Организатор (+10 минут)');
+                } else {
+                    appliedModifiers.push('Организатор (не применимо, так как исполнитель является организатором)');
+                }
+            } else {
+                appliedModifiers.push(`${complicity} (полное наказание)`);
+            }
+
+            // Apply offense-specific modifiers
+            if (offenseWithMods.modifiers.includes('Гипноз')) {
+                minutes = 0;
+                appliedModifiers.push('Гипноз (снятие обвинений)');
+            }
+            if (offenseWithMods.modifiers.includes('Крайняя необходимость')) {
+                minutes = 0;
+                appliedModifiers.push('Крайняя необходимость (снятие обвинений)');
+            }
+            if (offenseWithMods.modifiers.includes('Допустимая самооборона')) {
+                minutes = 0;
+                appliedModifiers.push('Допустимая самооборона (снятие обвинений)');
+            }
+            if (offenseWithMods.modifiers.includes('Манипулирование синтетиками')) {
+                appliedModifiers.push('Манипулирование синтетиками (полное наказание)');
+            }
+            if (offenseWithMods.modifiers.includes('Должностное преступление')) {
                 minutes += 10;
                 appliedModifiers.push('Должностное преступление (+10 минут)');
             }
-            if (modifiers.includes('Преступление против должностного лица')) {
-                minutes += 10;
-                appliedModifiers.push('Преступление против должностного лица (+10 минут)');
+            if (offenseWithMods.modifiers.includes('Преступление против должностного лица')) {
+                if (offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X')) {
+                    minutes += 10;
+                    appliedModifiers.push('Преступление против должностного лица (+10 минут)');
+                } else {
+                    appliedModifiers.push('Преступление против должностного лица (не применимо для данной статьи)');
+                }
             }
-            if (modifiers.includes('Явка с повинной')) {
+            if (offenseWithMods.modifiers.includes('Расизм')) {
+                minutes += 10;
+                appliedModifiers.push('Расизм (+10 минут)');
+            }
+            if (offenseWithMods.modifiers.includes('Явка с повинной')) {
                 minutes = Math.max(0, minutes - 5);
                 appliedModifiers.push('Явка с повинной (-5 минут)');
             }
@@ -221,18 +418,25 @@ const App: React.FC = () => {
             offenseDetails.push(`[${offense.code} - ${offense.title}], модификаторы: ${appliedModifiers.length > 0 ? appliedModifiers.join(', ') : 'отсутствуют'}`);
         });
 
-        // Apply recidivism modifier to total
-        const recidivismCount = modifiers.filter((m) => m.startsWith('Рецидив')).length;
-        const recidivismMinutes = recidivismCount * 5;
-        totalMinutes += recidivismMinutes;
-        if (recidivismCount > 0) {
-            offenseDetails.push(`Рецидив (+${recidivismMinutes} минут за ${recidivismCount} случаев)`);
+        // Apply global modifiers (Сделка со следствием и Рецидив)
+        if (globalModifiers.deal && globalModifiers.dealReduction > 0) {
+            totalMinutes = Math.max(0, totalMinutes - globalModifiers.dealReduction);
+            offenseDetails.push(`Сделка со следствием (-${globalModifiers.dealReduction} минут)`);
+        }
+        if (globalModifiers.recidivism && globalModifiers.recidivismCount > 0) {
+            const recidivismMinutes = globalModifiers.recidivismCount * 5;
+            totalMinutes += recidivismMinutes;
+            offenseDetails.push(`Рецидив (+${recidivismMinutes} минут за ${globalModifiers.recidivismCount} случаев)`);
         }
 
-        // Determine final penalty
+        // Determine final legal penalty
         let finalPenalty = '';
-        if (guilt === 'отсутствие вины' || modifiers.includes('Допустимая самооборона')) {
-            finalPenalty = 'Снятие наказания';
+        if (guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))) {
+            finalPenalty = 'Снятие обвинений';
         } else if (isDeathPenalty) {
             finalPenalty = 'Высшая мера наказания';
         } else if (isLifeSentence) {
@@ -241,8 +445,17 @@ const App: React.FC = () => {
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
         }
 
+        // Determine disciplinary penalty based on the most severe offense
+        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+        if (guilt === 'Отсутствие вины' ||
+            completion === 'Успешный добровольный отказ от преступления' ||
+            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
+            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))) {
+            disciplinaryPenalty = 'Не предусмотрено';
+        }
+
         // Generate document text
-        const currentTime = formatTime(timer.elapsedSeconds);
         const currentDate = '27.04.3025';
         const documentText = `
 [color=#982a2d]███░███░░░░██░░░░[/color]
@@ -266,7 +479,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 [bullet/][bold]${finalPenalty}[/bold]
 
 Административное наказание:
-[bullet/][bold]${finalPenalty}[/bold]
+[bullet/][bold]${disciplinaryPenalty}[/bold]
 
 Срок заключения под стражу отсчитывается с: [bold]${currentTime}[/bold]
 =============================================
@@ -299,6 +512,12 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         { section: '4XX', chapters: ['41X', '42X', '43X'] },
     ];
 
+    // Получение названия статьи по коду
+    const getOffenseTitle = (code: string | null): string => {
+        const offense = offenses.find((o) => o.code === code);
+        return offense ? offense.title : '';
+    };
+
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4">
             {/* Settings Section */}
@@ -310,7 +529,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                         <input
                             type="text"
                             value={settings.fullName}
-                            onChange={(e) => setSettings({ ...settings, fullName: e.target.value })}
+                            onChange={(e) => setSettings({...settings, fullName: e.target.value})}
                             className="w-full p-2 bg-gray-700 rounded"
                             placeholder="Иванов Иван"
                         />
@@ -320,7 +539,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                         <input
                             type="text"
                             value={settings.position}
-                            onChange={(e) => setSettings({ ...settings, position: e.target.value })}
+                            onChange={(e) => setSettings({...settings, position: e.target.value})}
                             className="w-full p-2 bg-gray-700 rounded"
                             placeholder="Смотритель"
                         />
@@ -330,22 +549,41 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                         <input
                             type="text"
                             value={settings.station}
-                            onChange={(e) => setSettings({ ...settings, station: e.target.value })}
+                            onChange={(e) => setSettings({...settings, station: e.target.value})}
                             className="w-full p-2 bg-gray-700 rounded"
                             placeholder="Station XX-000"
                         />
                     </div>
                 </div>
-                <button
-                    onClick={startTimer}
-                    className="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-                    disabled={timer.running}
-                >
-                    Старт таймера
-                </button>
-                {timer.running && (
-                    <p className="mt-2">Текущее время: {formatTime(timer.elapsedSeconds)}</p>
-                )}
+                <div className="mt-4 flex flex-col items-start">
+                    <h3 className="mb-2 text-lg font-semibold">Время от начала смены</h3>
+                    <div className="flex items-start space-x-4">
+                        <div className="flex flex-col items-center">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={startTimeInput}
+                                onChange={handleStartTimeChange}
+                                className="p-2 h-10 bg-gray-700 rounded w-24 text-center"
+                                placeholder="00:00:00"
+                            />
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <button
+                                onClick={startTimer}
+                                className="px-4 h-10 bg-blue-600 rounded hover:bg-blue-700"
+                            >
+                                Старт
+                            </button>
+                            <label className="block text-sm invisible">Кнопка</label>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <div className="p-2 h-10 flex items-center justify-center bg-gray-700 rounded w-24 text-center">
+                                {currentTime}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Object Details */}
@@ -357,7 +595,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                         <input
                             type="text"
                             value={objectDetails.fullName}
-                            onChange={(e) => setObjectDetails({ ...objectDetails, fullName: e.target.value })}
+                            onChange={(e) => setObjectDetails({...objectDetails, fullName: e.target.value})}
                             className="w-full p-2 bg-gray-700 rounded"
                             placeholder="Петров Петр"
                         />
@@ -367,7 +605,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                         <input
                             type="text"
                             value={objectDetails.position}
-                            onChange={(e) => setObjectDetails({ ...objectDetails, position: e.target.value })}
+                            onChange={(e) => setObjectDetails({...objectDetails, position: e.target.value})}
                             className="w-full p-2 bg-gray-700 rounded"
                             placeholder="Инженер"
                         />
@@ -405,13 +643,13 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                                     <th className="bg-gray-800 p-2">{chapter}</th>
                                     {['XX1', 'XX2', 'XX3', 'XX4', 'XX5', 'XX6'].map((severity) => {
                                         const offense = chapterOffenses.find((o) => o.severity === severity);
-                                        const isSelected = offense && selectedOffenses.includes(offense.code);
+                                        const isSelected = offense && selectedOffenses.some((o) => o.code === offense.code);
                                         return (
                                             <td
                                                 key={severity}
                                                 className={`p-2 cursor-pointer border border-gray-700 ${
                                                     isSelected
-                                                        ? 'bg-indigo-500' // Изменили цвет выделения на более мягкий индиго
+                                                        ? 'bg-amber-500'
                                                         : severity === 'XX1'
                                                             ? 'bg-green-800'
                                                             : severity === 'XX2'
@@ -455,16 +693,22 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 <h2 className="text-xl font-bold mb-2">Выбранные статьи</h2>
                 {selectedOffenses.length > 0 ? (
                     <ul className="list-disc pl-5">
-                        {selectedOffenses.map((code) => {
-                            const offense = offenses.find((o) => o.code === code);
+                        {selectedOffenses.map((offenseWithMods) => {
+                            const offense = offenses.find((o) => o.code === offenseWithMods.code);
                             return (
-                                <li key={code}>
+                                <li key={offenseWithMods.code}>
                                     {offense?.code} - {offense?.title}
                                     <button
-                                        onClick={() => toggleOffense(code)}
+                                        onClick={() => toggleOffense(offenseWithMods.code)}
                                         className="ml-2 px-2 py-1 bg-red-600 rounded hover:bg-red-700"
                                     >
                                         Удалить
+                                    </button>
+                                    <button
+                                        onClick={() => openModifiersModal(offenseWithMods.code)}
+                                        className="ml-2 px-2 py-1 bg-blue-600 rounded hover:bg-blue-700"
+                                    >
+                                        Модификаторы
                                     </button>
                                 </li>
                             );
@@ -492,22 +736,22 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 <h2 className="text-xl font-bold mb-4">Форма вины</h2>
                 <div className="space-y-2">
                     <button
-                        onClick={() => handleGuiltSelection('умышленно')}
+                        onClick={() => handleGuiltSelection('Преступление, совершенное умышленно')}
                         className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
                     >
                         Преступление, совершенное умышленно (полное наказание)
                     </button>
                     <button
-                        onClick={() => handleGuiltSelection('по неосторожности')}
+                        onClick={() => handleGuiltSelection('Преступление, совершенное по неосторожности')}
                         className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
                     >
                         Преступление, совершенное по неосторожности (-5 минут к наказанию)
                     </button>
                     <button
-                        onClick={() => handleGuiltSelection('отсутствие вины')}
+                        onClick={() => handleGuiltSelection('Отсутствие вины')}
                         className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
                     >
-                        Отсутствие вины (снятие наказания)
+                        Отсутствие вины (снятие обвинений)
                     </button>
                 </div>
                 <button
@@ -518,65 +762,133 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 </button>
             </Modal>
 
-            {/* Modifiers Modal */}
+            {/* Completion Modal */}
+            <Modal
+                isOpen={isCompletionModalOpen}
+                onRequestClose={() => setIsCompletionModalOpen(false)}
+                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
+                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+            >
+                <h2 className="text-xl font-bold mb-4">Неоконченное и оконченное преступление</h2>
+                <div className="space-y-2">
+                    <button
+                        onClick={() => handleCompletionSelection('Оконченное преступление')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Оконченное преступление (полное наказание)
+                    </button>
+                    <button
+                        onClick={() => handleCompletionSelection('Покушение на преступление')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Покушение на преступление (полное наказание)
+                    </button>
+                    <button
+                        onClick={() => handleCompletionSelection('Приготовление к преступлению')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Приготовление к преступлению (зависит от статьи)
+                    </button>
+                    <button
+                        onClick={() => handleCompletionSelection('Безуспешный добровольный отказ от преступления')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Безуспешный добровольный отказ от преступления (-5 минут)
+                    </button>
+                    <button
+                        onClick={() => handleCompletionSelection('Успешный добровольный отказ от преступления')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Успешный добровольный отказ от преступления (снятие обвинений)
+                    </button>
+                </div>
+                <button
+                    onClick={() => setIsCompletionModalOpen(false)}
+                    className="mt-4 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Закрыть
+                </button>
+            </Modal>
+
+            {/* Complicity Modal */}
+            <Modal
+                isOpen={isComplicityModalOpen}
+                onRequestClose={() => setIsComplicityModalOpen(false)}
+                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
+                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+            >
+                <h2 className="text-xl font-bold mb-4">Соучастие в преступлении</h2>
+                <div className="space-y-2">
+                    <button
+                        onClick={() => handleComplicitySelection('Исполнитель')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Исполнитель (полное наказание)
+                    </button>
+                    <button
+                        onClick={() => handleComplicitySelection('Подстрекатель')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Подстрекатель (полное наказание)
+                    </button>
+                    <button
+                        onClick={() => handleComplicitySelection('Пособник')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Пособник (полное наказание)
+                    </button>
+                    <button
+                        onClick={() => handleComplicitySelection('Организатор')}
+                        className="w-full p-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Организатор (+10 минут)
+                    </button>
+                </div>
+                <button
+                    onClick={() => setIsComplicityModalOpen(false)}
+                    className="mt-4 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Закрыть
+                </button>
+            </Modal>
+
+            {/* Optional Modifiers Modal for Each Offense */}
             <Modal
                 isOpen={isModifiersModalOpen}
                 onRequestClose={() => setIsModifiersModalOpen(false)}
                 className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
                 overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
             >
-                <h2 className="text-xl font-bold mb-4">Необязательные модификаторы</h2>
+                <h2 className="text-xl font-bold mb-4">
+                    Модификаторы для статьи {currentOffenseCode} - {getOffenseTitle(currentOffenseCode)}
+                </h2>
                 <div className="space-y-2">
-                    {[
-                        'Допустимая самооборона (снятие наказания)',
-                        'Должностное преступление (+10 минут к наказанию)',
-                        'Преступление против должностного лица (+10 минут к наказанию)',
-                        'Явка с повинной (-5 минут к наказанию)',
-                        'Рецидив (+5 минут к наказанию за каждый случай рецидива)',
-                    ].map((modifier) => (
-                        <div key={modifier} className="flex items-center">
+                    {modifierOptions.map((modifier) => (
+                        <div key={modifier.name} className="flex items-center">
                             <input
                                 type="checkbox"
-                                checked={modifiers.includes(modifier)}
+                                checked={
+                                    selectedOffenses.find((o) => o.code === currentOffenseCode)?.modifiers.includes(modifier.name) || false
+                                }
                                 onChange={() => {
-                                    if (modifier.startsWith('Рецидив')) {
-                                        if (modifiers.includes(modifier)) {
-                                            setModifiers(modifiers.filter((m) => !m.startsWith('Рецидив')));
-                                        } else {
-                                            setModifiers([...modifiers, modifier]);
-                                        }
-                                    } else {
-                                        setModifiers(
-                                            modifiers.includes(modifier)
-                                                ? modifiers.filter((m) => m !== modifier)
-                                                : [...modifiers, modifier]
-                                        );
-                                    }
+                                    setSelectedOffenses((prev) =>
+                                        prev.map((o) =>
+                                            o.code === currentOffenseCode
+                                                ? {
+                                                    ...o,
+                                                    modifiers: o.modifiers.includes(modifier.name)
+                                                        ? o.modifiers.filter((m) => m !== modifier.name)
+                                                        : [...o.modifiers, modifier.name],
+                                                }
+                                                : o
+                                        )
+                                    );
                                 }}
                                 className="mr-2"
                             />
-                            <label>{modifier}</label>
+                            <label>{`${modifier.name} (${modifier.description})`}</label>
                         </div>
                     ))}
-                    {modifiers.some((m) => m.startsWith('Рецидив')) && (
-                        <div className="flex items-center mt-2">
-                            <label className="mr-2">Количество случаев рецидива:</label>
-                            <input
-                                type="number"
-                                min="1"
-                                value={modifiers.filter((m) => m.startsWith('Рецидив')).length}
-                                onChange={(e) => {
-                                    const count = parseInt(e.target.value) || 1;
-                                    const newModifiers = modifiers.filter((m) => !m.startsWith('Рецидив'));
-                                    for (let i = 0; i < count; i++) {
-                                        newModifiers.push('Рецидив (+5 минут к наказанию за каждый случай рецидива)');
-                                    }
-                                    setModifiers(newModifiers);
-                                }}
-                                className="p-1 bg-gray-700 rounded w-16"
-                            />
-                        </div>
-                    )}
                 </div>
                 <button
                     onClick={handleModifiersSelection}
@@ -586,6 +898,78 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 </button>
                 <button
                     onClick={() => setIsModifiersModalOpen(false)}
+                    className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Закрыть
+                </button>
+            </Modal>
+
+            {/* Global Modifiers Modal */}
+            <Modal
+                isOpen={isGlobalModifiersModalOpen}
+                onRequestClose={() => setIsGlobalModifiersModalOpen(false)}
+                className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
+                overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+            >
+                <h2 className="text-xl font-bold mb-4">Глобальные модификаторы приговора</h2>
+                <div className="space-y-2">
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            checked={globalModifiers.deal}
+                            onChange={() => setGlobalModifiers((prev) => ({ ...prev, deal: !prev.deal }))}
+                            className="mr-2"
+                        />
+                        <label>Сделка со следствием (уменьшение срока)</label>
+                    </div>
+                    {globalModifiers.deal && (
+                        <div className="flex items-center mt-2">
+                            <label className="mr-2">Уменьшение срока (минуты):</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={globalModifiers.dealReduction}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setGlobalModifiers((prev) => ({ ...prev, dealReduction: value }));
+                                }}
+                                className="p-1 bg-gray-700 rounded w-16"
+                            />
+                        </div>
+                    )}
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            checked={globalModifiers.recidivism}
+                            onChange={() => setGlobalModifiers((prev) => ({ ...prev, recidivism: !prev.recidivism }))}
+                            className="mr-2"
+                        />
+                        <label>Рецидив (+5 минут за каждый случай)</label>
+                    </div>
+                    {globalModifiers.recidivism && (
+                        <div className="flex items-center mt-2">
+                            <label className="mr-2">Количество случаев рецидива:</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={globalModifiers.recidivismCount}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setGlobalModifiers((prev) => ({ ...prev, recidivismCount: value }));
+                                }}
+                                className="p-1 bg-gray-700 rounded w-16"
+                            />
+                        </div>
+                    )}
+                </div>
+                <button
+                    onClick={handleGlobalModifiersSelection}
+                    className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                >
+                    Подтвердить
+                </button>
+                <button
+                    onClick={() => setIsGlobalModifiersModalOpen(false)}
                     className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
                 >
                     Закрыть

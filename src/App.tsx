@@ -72,11 +72,30 @@ const App: React.FC = () => {
 
     const toggleOffense = (code: string) => {
         setSelectedOffenses((prev) => {
+            const selectedOffense = offenses.find((o) => o.code === code);
+            if (!selectedOffense) return prev;
+
             const existing = prev.find((o) => o.code === code);
             if (existing) {
+                // Если статья уже выбрана, снимаем её
                 return prev.filter((o) => o.code !== code);
             } else {
-                return [...prev, { code, modifiers: [] }];
+                // Проверяем, есть ли уже статья из того же chapter
+                const sameChapterOffense = prev.find((o) => {
+                    const offense = offenses.find((off) => off.code === o.code);
+                    return offense && offense.chapter === selectedOffense.chapter;
+                });
+
+                if (sameChapterOffense) {
+                    // Удаляем старую статью из того же chapter и добавляем новую
+                    return [
+                        ...prev.filter((o) => o.code !== sameChapterOffense.code),
+                        { code, modifiers: [] },
+                    ];
+                } else {
+                    // Добавляем новую статью
+                    return [...prev, { code, modifiers: [] }];
+                }
             }
         });
     };

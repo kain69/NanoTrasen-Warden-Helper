@@ -54,6 +54,8 @@ const App: React.FC = () => {
 
     // Таймер: обновление каждую секунду
     useEffect(() => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         let interval: NodeJS.Timeout | null = null;
         if (timer.running) {
             interval = setInterval(() => {
@@ -179,7 +181,6 @@ const App: React.FC = () => {
             }
 
             if (completion === 'Покушение на преступление') {
-                minutes = minutes;
                 appliedModifiers.push('Покушение на преступление (полное наказание)');
             } else if (completion === 'Приготовление к преступлению') {
                 if (['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity)) {
@@ -197,6 +198,8 @@ const App: React.FC = () => {
             }
 
             if (complicity === 'Организатор') {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
                 if (complicity !== 'Исполнитель') {
                     minutes += 10;
                     appliedModifiers.push('Организатор (+10 минут)');

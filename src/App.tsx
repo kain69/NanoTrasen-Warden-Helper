@@ -12,7 +12,7 @@ import ModifiersModal from './components/ModifiersModal';
 import GlobalModifiersModal from './components/GlobalModifiersModal';
 import ResultModal from './components/ResultModal';
 import WarningModal from './components/WarningModal';
-import ConfirmModal from './components/ConfirmModal'; // Новый компонент
+import ConfirmModal from './components/ConfirmModal';
 import {
     OffenseWithModifiers,
     GlobalModifiers,
@@ -33,7 +33,7 @@ const App: React.FC = () => {
     const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
     const [isGlobalModifiersModalOpen, setIsGlobalModifiersModalOpen] = useState(false);
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Новое состояние для ConfirmModal
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [warningMessage, setWarningMessage] = useState('');
     const [currentOffenseCode, setCurrentOffenseCode] = useState<string | null>(null);
     const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -64,9 +64,8 @@ const App: React.FC = () => {
         isLifeSentence: boolean;
         isDeathPenalty: boolean;
         xx5Count: number;
-    } | null>(null); // Для временного хранения данных перед подтверждением
+    } | null>(null);
 
-    // Таймер: обновление каждую секунду
     useEffect(() => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
@@ -182,7 +181,7 @@ const App: React.FC = () => {
 
         const documentText = `
 [color=#982a2d]███░███░░░░██░░░░[/color]
-[color=#982a2d]░██░████░░░██░░░░[/color]        [head=3]Бланк документа[/head]
+[color=#982a2d]░██░████░░██░░░░[/color]        [head=3]Бланк документа[/head]
 [color=#982a2d]░░█░██░██░░██░█░░[/color]                [head=3]NanoTrasen[/head]
 [color=#982a2d]░░░░██░░██░██░██░[/color]           [bold]${settings.station} СБ[/bold]
 [color=#982a2d]░░░░██░░░████░███[/color]
@@ -364,7 +363,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 finalPenalty = 'Высшая мера наказания';
             }
         } else if (totalMinutes <= 5 && totalMinutes > 0) {
-            // Сохраняем данные для последующего подтверждения
             setPendingVerdict({
                 totalMinutes,
                 finalOffenses,
@@ -375,12 +373,13 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 xx5Count,
             });
             setIsConfirmModalOpen(true);
-            return; // Прерываем выполнение до подтверждения
+            return;
         } else {
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
         }
 
-        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+        // Определяем дисциплинарное наказание на основе итогового правового наказания и срока
+        let disciplinaryPenalty = '';
         if (
             guilt === 'Отсутствие вины' ||
             completion === 'Успешный добровольный отказ от преступления' ||
@@ -389,6 +388,18 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
         ) {
             disciplinaryPenalty = 'Не предусмотрено';
+        } else if (finalPenalty === 'Высшая мера наказания' || finalPenalty === 'Пожизненное заключение') {
+            disciplinaryPenalty = 'Увольнение';
+        } else if (totalMinutes <= 5) {
+            disciplinaryPenalty = 'Не предусмотрено'; // Для предупреждения или срока до 5 минут
+        } else if (totalMinutes <= 10) {
+            disciplinaryPenalty = disciplinaryPenalties['XX2']; // На усмотрение главы отдела
+        } else if (totalMinutes <= 15) {
+            disciplinaryPenalty = disciplinaryPenalties['XX3']; // На усмотрение главы отдела
+        } else if (totalMinutes <= 25) {
+            disciplinaryPenalty = disciplinaryPenalties['XX4']; // На усмотрение главы отдела
+        } else {
+            disciplinaryPenalty = 'Увольнение'; // Для срока > 25 минут, но < 75 минут
         }
 
         // Проверка полномочий
@@ -455,7 +466,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 
         const {
             totalMinutes,
-            maxSeverity,
             offenseDetails,
             isLifeSentence,
             isDeathPenalty,
@@ -463,7 +473,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         } = pendingVerdict;
 
         let finalPenalty = '';
-        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+        let disciplinaryPenalty = '';
 
         if (
             guilt === 'Отсутствие вины' ||
@@ -476,26 +486,30 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             disciplinaryPenalty = 'Не предусмотрено';
         } else if (isDeathPenalty) {
             finalPenalty = 'Высшая мера наказания';
+            disciplinaryPenalty = 'Увольнение';
         } else if (isLifeSentence || totalMinutes >= 75) {
             finalPenalty = 'Пожизненное заключение';
             if (xx5Count >= 2) {
                 finalPenalty = 'Высшая мера наказания';
             }
+            disciplinaryPenalty = 'Увольнение';
         } else if (totalMinutes <= 5 && totalMinutes > 0) {
             finalPenalty = replace ? 'Предупреждение' : `${totalMinutes} минут тюремного заключения`;
+            disciplinaryPenalty = replace ? 'Не предусмотрено' : 'Не предусмотрено'; // Для XX1
         } else {
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
+            if (totalMinutes <= 10) {
+                disciplinaryPenalty = disciplinaryPenalties['XX2'];
+            } else if (totalMinutes <= 15) {
+                disciplinaryPenalty = disciplinaryPenalties['XX3'];
+            } else if (totalMinutes <= 25) {
+                disciplinaryPenalty = disciplinaryPenalties['XX4'];
+            } else {
+                disciplinaryPenalty = 'Увольнение';
+            }
         }
 
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
-            disciplinaryPenalty = 'Не предусмотрено';
-        }
+        setIsConfirmModalOpen(false);
 
         // Проверка полномочий
         const position = settings.position.toLowerCase();
@@ -538,8 +552,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             }
         }
 
-        setIsConfirmModalOpen(false);
-
         if (!canProceed) {
             setWarningMessage(warningMessage);
             setIsWarningModalOpen(true);
@@ -555,7 +567,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 
         const {
             totalMinutes,
-            maxSeverity,
             offenseDetails,
             isLifeSentence,
             isDeathPenalty,
@@ -563,7 +574,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         } = pendingVerdict;
 
         let finalPenalty = '';
-        let disciplinaryPenalty = disciplinaryPenalties[maxSeverity];
+        let disciplinaryPenalty = '';
 
         if (
             guilt === 'Отсутствие вины' ||
@@ -576,25 +587,27 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             disciplinaryPenalty = 'Не предусмотрено';
         } else if (isDeathPenalty) {
             finalPenalty = 'Высшая мера наказания';
+            disciplinaryPenalty = 'Увольнение';
         } else if (isLifeSentence || totalMinutes >= 75) {
             finalPenalty = 'Пожизненное заключение';
             if (xx5Count >= 2) {
                 finalPenalty = 'Высшая мера наказания';
             }
+            disciplinaryPenalty = 'Увольнение';
         } else if (totalMinutes <= 5 && totalMinutes > 0) {
-            finalPenalty = 'Предупреждение'; // Предполагаем, что замена уже подтверждена ранее
+            finalPenalty = 'Предупреждение';
+            disciplinaryPenalty = 'Не предусмотрено';
         } else {
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
-        }
-
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
-            disciplinaryPenalty = 'Не предусмотрено';
+            if (totalMinutes <= 10) {
+                disciplinaryPenalty = disciplinaryPenalties['XX2'];
+            } else if (totalMinutes <= 15) {
+                disciplinaryPenalty = disciplinaryPenalties['XX3'];
+            } else if (totalMinutes <= 25) {
+                disciplinaryPenalty = disciplinaryPenalties['XX4'];
+            } else {
+                disciplinaryPenalty = 'Увольнение';
+            }
         }
 
         setIsWarningModalOpen(false);
@@ -615,7 +628,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold font-anta>">NanoTrasen Warden Helper</h1>
+                <h1 className="text-2xl font-bold font-anta">NanoTrasen Warden Helper</h1>
                 <button
                     onClick={() => setIsSettingsModalOpen(true)}
                     className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"

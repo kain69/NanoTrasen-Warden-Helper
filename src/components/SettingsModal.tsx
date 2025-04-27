@@ -83,7 +83,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     const startTimer = () => {
-        const newStartSeconds = parseTimeToSeconds(startTimeInput);
+        let newStartSeconds = parseTimeToSeconds(startTimeInput);
+        if (isNaN(newStartSeconds)) {
+            newStartSeconds = 0;
+        }
         setBaseStartSeconds(newStartSeconds);
         setTimer({ elapsedSeconds: 0, running: true });
     };

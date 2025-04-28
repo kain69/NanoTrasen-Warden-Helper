@@ -1,7 +1,7 @@
 {
   "name": "nanotrasen-warden-helper",
   "private": true,
-  "version": "1.1.2",
+  "version": "2.0.0",
   "homepage": "https://kain69.github.io/NanoTrasen-Warden-Helper",
   "type": "module",
   "scripts": {
@@ -21,7 +21,8 @@
     "react": "^18.0.0",
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.0.0",
-    "react-modal": "^3.16.3"
+    "react-modal": "^3.16.3",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

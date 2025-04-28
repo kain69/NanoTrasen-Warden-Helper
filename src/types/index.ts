@@ -39,3 +39,14 @@ export interface Result {
     disciplinaryPenalty: string;
     documentText: string;
 }
+
+export interface VerdictHistoryEntry {
+    id: string;
+    timestamp: string;
+    fullName: string;
+    position: string;
+    penalty: string;
+    disciplinaryPenalty: string;
+    documentText: string;
+    offenseDetails: string[];
+}

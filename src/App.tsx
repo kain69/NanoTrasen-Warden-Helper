@@ -10,6 +10,7 @@ import GlobalModifiersModal from './components/GlobalModifiersModal';
 import ResultModal from './components/ResultModal';
 import WarningModal from './components/WarningModal';
 import ConfirmModal from './components/ConfirmModal';
+import VerdictHistoryModal from './components/VerdictHistoryModal';
 import {
     OffenseWithModifiers,
     GlobalModifiers,
@@ -17,7 +18,9 @@ import {
     Timer,
     ObjectDetails as ObjectDetailsType,
     Result,
+    VerdictHistoryEntry,
 } from './types';
+import { v4 as uuidv4 } from 'uuid';
 
 Modal.setAppElement('#root');
 
@@ -28,9 +31,10 @@ const App: React.FC = () => {
     const [isGlobalModifiersModalOpen, setIsGlobalModifiersModalOpen] = useState(false);
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+    const [isVerdictHistoryModalOpen, setIsVerdictHistoryModalOpen] = useState(false);
     const [warningMessage, setWarningMessage] = useState('');
     const [currentOffenseCode, setCurrentOffenseCode] = useState<string | null>(null);
-    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
     const [globalModifiers, setGlobalModifiers] = useState<GlobalModifiers>({
         deal: false,
         dealReduction: 0,
@@ -45,7 +49,10 @@ const App: React.FC = () => {
     const [timer, setTimer] = useState<Timer>({ elapsedSeconds: 0, running: false });
     const [startTimeInput, setStartTimeInput] = useState('');
     const [baseStartSeconds, setBaseStartSeconds] = useState(0);
-    const [objectDetails, setObjectDetails] = useState<ObjectDetailsType>({ fullName: '', position: '' });
+    const [objectDetails, setObjectDetails] = useState<ObjectDetailsType>({
+        fullName: '',
+        position: '',
+    });
     const [result, setResult] = useState<Result | null>(null);
     const [pendingVerdict, setPendingVerdict] = useState<{
         totalMinutes: number;
@@ -57,6 +64,15 @@ const App: React.FC = () => {
         xx5Count: number;
     } | null>(null);
     const [showSeconds, setShowSeconds] = useState<boolean>(false);
+
+    const [verdictHistory, setVerdictHistory] = useState<VerdictHistoryEntry[]>(() => {
+        const saved = localStorage.getItem('verdictHistory');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('verdictHistory', JSON.stringify(verdictHistory));
+    }, [verdictHistory]);
 
     useEffect(() => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -141,6 +157,22 @@ const App: React.FC = () => {
         });
     };
 
+    const getCurrentTimestamp = () => {
+        const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const timeString = showSeconds
+            ? `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+            : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+        const currentDate = new Date();
+        currentDate.setFullYear(currentDate.getFullYear() + 1000);
+        const gameDate = currentDate.toLocaleDateString('ru-RU');
+
+        return `${timeString}, ${gameDate}`;
+    };
+
     const finalizeVerdict = (
         finalPenalty: string,
         disciplinaryPenalty: string,
@@ -187,12 +219,27 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                                 [italic]Место для печатей[/italic]
     `;
 
-        setResult({
+        const result = {
             penalty: finalPenalty,
             disciplinaryPenalty: disciplinaryPenalty,
             documentText,
-        });
+        };
+
+        setResult(result);
         setIsResultModalOpen(true);
+
+        const timestamp = getCurrentTimestamp();
+        const historyEntry: VerdictHistoryEntry = {
+            id: uuidv4(),
+            timestamp,
+            fullName: objectDetails.fullName,
+            position: objectDetails.position,
+            penalty: finalPenalty,
+            disciplinaryPenalty: disciplinaryPenalty,
+            documentText,
+            offenseDetails,
+        };
+        setVerdictHistory((prev) => [historyEntry, ...prev]);
     };
 
     const calculateVerdict = () => {
@@ -612,12 +659,20 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         <div className="min-h-screen bg-gray-900 text-white p-4">
             <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold font-anta">NanoTrasen Warden Helper</h1>
-                <button
-                    onClick={() => setIsSettingsModalOpen(true)}
-                    className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-                >
-                    Настройки
-                </button>
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => setIsVerdictHistoryModalOpen(true)}
+                        className="px-4 py-2 bg-purple-600 rounded hover:bg-purple-700"
+                    >
+                        История
+                    </button>
+                    <button
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                        Настройки
+                    </button>
+                </div>
             </div>
 
             <SettingsModal
@@ -696,6 +751,14 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 onRequestClose={() => setIsConfirmModalOpen(false)}
                 onConfirm={handleConfirmReplace}
                 minutes={pendingVerdict?.totalMinutes || 0}
+            />
+
+            <VerdictHistoryModal
+                isOpen={isVerdictHistoryModalOpen}
+                onRequestClose={() => setIsVerdictHistoryModalOpen(false)}
+                verdictHistory={verdictHistory}
+                setVerdictHistory={setVerdictHistory}
+                copyToClipboard={copyToClipboard}
             />
         </div>
     );

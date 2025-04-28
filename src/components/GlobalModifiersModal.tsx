@@ -77,7 +77,7 @@ const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
             </div>
             <button
                 onClick={handleGlobalModifiersSelection}
-                className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                className="mt-4 mr-2 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
             >
                 Подтвердить
             </button>

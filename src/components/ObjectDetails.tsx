@@ -9,23 +9,23 @@ interface ObjectDetailsProps {
 
 const ObjectDetails: React.FC<ObjectDetailsProps> = ({ objectDetails, setObjectDetails }) => {
     return (
-        <div className="bg-gray-800 p-4 rounded-lg mb-4">
-            <h2 className="text-xl font-bold mb-2">Данные объекта</h2>
+        <div className="mb-4 p-4 bg-gray-800 rounded-lg">
+            <h2 className="text-xl font-bold mb-2">Данные нарушителя</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block mb-1">ФИО объекта:</label>
+                    <label className="block mb-1">ФИО нарушителя:</label>
                     <input
                         type="text"
                         value={objectDetails.fullName}
                         onChange={(e) =>
                             setObjectDetails({ ...objectDetails, fullName: e.target.value })
                         }
-                        className="w-full p-2 bg-gray-700 rounded"
+                        className="w-full p-2 bg-gray-700 rounded text-white"
                         placeholder="Иванов Иван"
                     />
                 </div>
                 <div>
-                    <label className="block mb-1">Должность объекта:</label>
+                    <label className="block mb-1">Должность нарушителя:</label>
                     <select
                         value={objectDetails.position}
                         onChange={(e) =>

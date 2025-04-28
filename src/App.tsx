@@ -210,6 +210,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 
         setResult({
             penalty: finalPenalty,
+            disciplinaryPenalty: disciplinaryPenalty,
             documentText,
         });
         setIsResultModalOpen(true);
@@ -378,7 +379,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
         }
 
-        // Определяем дисциплинарное наказание на основе итогового правового наказания и срока
         let disciplinaryPenalty = '';
         if (
             guilt === 'Отсутствие вины' ||
@@ -391,18 +391,17 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         } else if (finalPenalty === 'Высшая мера наказания' || finalPenalty === 'Пожизненное заключение') {
             disciplinaryPenalty = 'Увольнение';
         } else if (totalMinutes <= 5) {
-            disciplinaryPenalty = 'Не предусмотрено'; // Для предупреждения или срока до 5 минут
+            disciplinaryPenalty = 'Не предусмотрено';
         } else if (totalMinutes <= 10) {
-            disciplinaryPenalty = disciplinaryPenalties['XX2']; // На усмотрение главы отдела
+            disciplinaryPenalty = disciplinaryPenalties['XX2'];
         } else if (totalMinutes <= 15) {
-            disciplinaryPenalty = disciplinaryPenalties['XX3']; // На усмотрение главы отдела
+            disciplinaryPenalty = disciplinaryPenalties['XX3'];
         } else if (totalMinutes <= 25) {
-            disciplinaryPenalty = disciplinaryPenalties['XX4']; // На усмотрение главы отдела
+            disciplinaryPenalty = disciplinaryPenalties['XX4'];
         } else {
-            disciplinaryPenalty = 'Увольнение'; // Для срока > 25 минут, но < 75 минут
+            disciplinaryPenalty = 'Увольнение';
         }
 
-        // Проверка полномочий
         const position = settings.position.toLowerCase();
         let canProceed = true;
         let warningMessage = '';
@@ -495,7 +494,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             disciplinaryPenalty = 'Увольнение';
         } else if (totalMinutes <= 5 && totalMinutes > 0) {
             finalPenalty = replace ? 'Предупреждение' : `${totalMinutes} минут тюремного заключения`;
-            disciplinaryPenalty = replace ? 'Не предусмотрено' : 'Не предусмотрено'; // Для XX1
+            disciplinaryPenalty = replace ? 'Не предусмотрено' : 'Не предусмотрено';
         } else {
             finalPenalty = `${totalMinutes} минут тюремного заключения`;
             if (totalMinutes <= 10) {
@@ -511,7 +510,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 
         setIsConfirmModalOpen(false);
 
-        // Проверка полномочий
         const position = settings.position.toLowerCase();
         let canProceed = true;
         let warningMessage = '';

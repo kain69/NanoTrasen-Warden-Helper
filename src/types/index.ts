@@ -36,5 +36,6 @@ export interface ObjectDetails {
 
 export interface Result {
     penalty: string;
+    disciplinaryPenalty: string;
     documentText: string;
 }

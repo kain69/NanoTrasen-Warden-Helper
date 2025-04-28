@@ -6,10 +6,12 @@ interface ResultModalProps {
     isOpen: boolean;
     onRequestClose: () => void;
     result: Result | null;
-    copyToClipboard: (text: string) => Promise<void>;
+    copyToClipboard: (text: string) => void;
 }
 
 const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onRequestClose, result, copyToClipboard }) => {
+    if (!result) return null;
+
     return (
         <Modal
             isOpen={isOpen}
@@ -18,26 +20,29 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onRequestClose, resul
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
             <h2 className="text-xl font-bold mb-4">Приговор</h2>
-            <p className="mb-4">
-                Итоговое наказание: <b>{result?.penalty}</b>
-            </p>
+            <div className="mb-4">
+                <p className="font-semibold">Правовое наказание: <span className="font-normal">{result.penalty}</span></p>
+                <p className="font-semibold">Дисциплинарное наказание: <span className="font-normal">{result.disciplinaryPenalty}</span></p>
+            </div>
             <textarea
-                className="w-full h-64 p-2 bg-gray-700 rounded mb-4"
-                value={result?.documentText}
+                className="w-full h-64 p-2 bg-gray-700 text-white rounded mb-4"
+                value={result.documentText}
                 readOnly
             />
-            <button
-                onClick={() => copyToClipboard(result?.documentText || '')}
-                className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-            >
-                Скопировать в буфер
-            </button>
-            <button
-                onClick={onRequestClose}
-                className="mt-2 ml-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-            >
-                Закрыть
-            </button>
+            <div className="flex justify-between">
+                <button
+                    onClick={() => copyToClipboard(result.documentText)}
+                    className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                >
+                    Скопировать в буфер
+                </button>
+                <button
+                    onClick={onRequestClose}
+                    className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Закрыть
+                </button>
+            </div>
         </Modal>
     );
 };

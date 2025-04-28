@@ -274,7 +274,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                     </div>
                 </div>
 
-                <hr className="my-6 border-t border-gray-600" />
+                <hr className="my-6 border-t border-gray-600"/>
 
                 <div>
                     <h3 className="text-lg font-semibold mb-2 text-gray-300">Необязательные модификаторы</h3>
@@ -381,7 +381,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                     </div>
                 </div>
             </div>
-            <div className="sticky bottom-0 bg-gray-800 py-4 flex justify-between">
+            <div className="sticky bottom-0 bg-gray-800 py-4 flex">
                 {!isFirstOffense && (
                     <button
                         onClick={handleBack}
@@ -390,6 +390,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                         Назад
                     </button>
                 )}
+                <div className="flex-grow"></div>
                 <div className="flex space-x-2">
                     <button
                         onClick={handleModifiersSelection}

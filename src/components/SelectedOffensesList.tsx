@@ -11,7 +11,6 @@ interface SelectedOffensesListProps {
 const SelectedOffensesList: React.FC<SelectedOffensesListProps> = ({
                                                                        selectedOffenses,
                                                                        toggleOffense,
-                                                                       openModifiersModal,
                                                                    }) => {
     return (
         <div className="mt-4 p-4 bg-gray-800 rounded-lg">
@@ -28,12 +27,6 @@ const SelectedOffensesList: React.FC<SelectedOffensesListProps> = ({
                                     className="ml-2 px-2 py-1 bg-red-600 rounded hover:bg-red-700"
                                 >
                                     Удалить
-                                </button>
-                                <button
-                                    onClick={() => openModifiersModal(offenseWithMods.code)}
-                                    className="ml-2 px-2 py-1 bg-blue-600 rounded hover:bg-blue-700"
-                                >
-                                    Модификаторы
                                 </button>
                             </li>
                         );

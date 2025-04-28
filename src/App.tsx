@@ -131,6 +131,16 @@ const App: React.FC = () => {
         calculateVerdict();
     };
 
+    const resetOffenses = () => {
+        setSelectedOffenses([]);
+        setGlobalModifiers({
+            deal: false,
+            dealReduction: 0,
+            recidivism: false,
+            recidivismCount: 0,
+        });
+    };
+
     const finalizeVerdict = (
         finalPenalty: string,
         disciplinaryPenalty: string,
@@ -228,14 +238,12 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 maxSeverity = offense.severity;
             }
 
-            // Правила валидации
             const isNegligenceOrGrossNegligence = ['Халатность', 'Грубая халатность'].includes(offense.title);
             const isHighSeverity = ['XX4', 'XX5', 'XX6'].includes(offense.severity);
             const isDutyRelatedChapter = offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X');
             const isExecutor = offenseWithMods.modifiers.includes('Исполнитель');
             const isOrganizer = offenseWithMods.modifiers.includes('Организатор');
 
-            // Применение модификаторов на уровне статьи
             if (offenseWithMods.modifiers.includes('Преступление, совершенное умышленно')) {
                 appliedModifiers.push('Преступление, совершенное умышленно (полное наказание)');
             }
@@ -338,7 +346,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             );
         });
 
-        // Применение глобальных модификаторов (только Рецидив и Сделка со следствием)
         if (globalModifiers.deal && globalModifiers.dealReduction > 0) {
             totalMinutes = Math.max(0, totalMinutes - globalModifiers.dealReduction);
             offenseDetails.push(`Сделка со следствием (-${globalModifiers.dealReduction} минут)`);
@@ -638,12 +645,20 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 openModifiersModal={openModifiersModal}
             />
 
-            <button
-                onClick={openVerdictProcess}
-                className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-            >
-                Вынести вердикт
-            </button>
+            <div className="mt-4 flex space-x-4">
+                <button
+                    onClick={openVerdictProcess}
+                    className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                >
+                    Вынести вердикт
+                </button>
+                <button
+                    onClick={resetOffenses}
+                    className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Сбросить
+                </button>
+            </div>
 
             <ModifiersModal
                 isOpen={isModifiersModalOpen}

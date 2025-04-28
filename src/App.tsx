@@ -25,6 +25,24 @@ import { v4 as uuidv4 } from 'uuid';
 Modal.setAppElement('#root');
 
 const App: React.FC = () => {
+    // Загружаем профиль из localStorage или используем значения по умолчанию
+    const [settings, setSettings] = useState<Settings>(() => {
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+            const parsedProfile = JSON.parse(savedProfile);
+            return {
+                fullName: parsedProfile.fullName || '',
+                position: parsedProfile.position || 'Смотритель',
+                station: 'Station XX-000',
+            };
+        }
+        return {
+            fullName: '',
+            position: 'Смотритель',
+            station: 'Station XX-000',
+        };
+    });
+
     const [selectedOffenses, setSelectedOffenses] = useState<OffenseWithModifiers[]>([]);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
@@ -40,11 +58,6 @@ const App: React.FC = () => {
         dealReduction: 0,
         recidivism: false,
         recidivismCount: 0,
-    });
-    const [settings, setSettings] = useState<Settings>({
-        fullName: '',
-        position: 'Смотритель',
-        station: 'Station XX-000',
     });
     const [timer, setTimer] = useState<Timer>({ elapsedSeconds: 0, running: false });
     const [startTimeInput, setStartTimeInput] = useState('');

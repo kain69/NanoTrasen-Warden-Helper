@@ -36,7 +36,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const parseTimeToSeconds = (time: string): number => {
         const [hours, minutes, seconds] = time.split(':').map(Number);
-        return (hours * 3600) + (minutes * 60) + seconds;
+        return (hours * 3600) + (minutes * 60) + (seconds || 0);
     };
 
     const formatTime = (seconds: number): string => {
@@ -96,6 +96,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         }
         setBaseStartSeconds(newStartSeconds);
         setTimer({ elapsedSeconds: 0, running: true });
+    };
+
+    const handleSaveProfile = () => {
+        const profile = {
+            fullName: settings.fullName,
+            position: settings.position,
+        };
+        localStorage.setItem('userProfile', JSON.stringify(profile));
+        alert('Профиль сохранен!');
     };
 
     const totalSeconds = baseStartSeconds + timer.elapsedSeconds;
@@ -193,12 +202,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </label>
                 </div>
             </div>
-            <button
-                onClick={onRequestClose}
-                className="mt-4 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-            >
-                Закрыть
-            </button>
+            <div className="mt-4 flex space-x-2">
+                <button
+                    onClick={handleSaveProfile}
+                    className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                >
+                    Сохранить профиль
+                </button>
+                <button
+                    onClick={onRequestClose}
+                    className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Закрыть
+                </button>
+            </div>
         </Modal>
     );
 };

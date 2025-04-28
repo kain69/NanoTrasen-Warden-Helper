@@ -63,6 +63,7 @@ const App: React.FC = () => {
         isDeathPenalty: boolean;
         xx5Count: number;
     } | null>(null);
+    const [pendingHistoryEntry, setPendingHistoryEntry] = useState<VerdictHistoryEntry | null>(null);
     const [showSeconds, setShowSeconds] = useState<boolean>(false);
 
     const [verdictHistory, setVerdictHistory] = useState<VerdictHistoryEntry[]>(() => {
@@ -226,7 +227,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         };
 
         setResult(result);
-        setIsResultModalOpen(true);
 
         const timestamp = getCurrentTimestamp();
         const historyEntry: VerdictHistoryEntry = {
@@ -239,7 +239,21 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             documentText,
             offenseDetails,
         };
-        setVerdictHistory((prev) => [historyEntry, ...prev]);
+        setPendingHistoryEntry(historyEntry);
+        setIsResultModalOpen(true);
+    };
+
+    const handleResultModalClose = () => {
+        if (pendingHistoryEntry) {
+            setVerdictHistory((prev) => [pendingHistoryEntry, ...prev]);
+        }
+        setPendingHistoryEntry(null);
+        setIsResultModalOpen(false);
+    };
+
+    const handleResultModalCloseWithoutSaving = () => {
+        setPendingHistoryEntry(null);
+        setIsResultModalOpen(false);
     };
 
     const calculateVerdict = () => {
@@ -734,7 +748,8 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 
             <ResultModal
                 isOpen={isResultModalOpen}
-                onRequestClose={() => setIsResultModalOpen(false)}
+                onRequestClose={handleResultModalClose}
+                onCloseWithoutSaving={handleResultModalCloseWithoutSaving}
                 result={result}
                 copyToClipboard={copyToClipboard}
             />

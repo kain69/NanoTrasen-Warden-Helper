@@ -735,6 +735,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 currentOffenseCode={currentOffenseCode}
                 selectedOffenses={selectedOffenses}
                 setSelectedOffenses={setSelectedOffenses}
+                setCurrentOffenseCode={setCurrentOffenseCode}
                 handleModifiersSelection={handleModifiersSelection}
             />
 
@@ -744,6 +745,10 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 globalModifiers={globalModifiers}
                 setGlobalModifiers={setGlobalModifiers}
                 handleGlobalModifiersSelection={handleGlobalModifiersSelection}
+                selectedOffenses={selectedOffenses}
+                setCurrentOffenseCode={setCurrentOffenseCode}
+                setIsModifiersModalOpen={setIsModifiersModalOpen}
+                setIsGlobalModifiersModalOpen={setIsGlobalModifiersModalOpen}
             />
 
             <ResultModal

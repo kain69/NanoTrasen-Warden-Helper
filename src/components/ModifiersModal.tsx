@@ -9,6 +9,7 @@ interface ModifiersModalProps {
     currentOffenseCode: string | null;
     selectedOffenses: OffenseWithModifiers[];
     setSelectedOffenses: React.Dispatch<React.SetStateAction<OffenseWithModifiers[]>>;
+    setCurrentOffenseCode: React.Dispatch<React.SetStateAction<string | null>>;
     handleModifiersSelection: () => void;
 }
 
@@ -18,6 +19,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                                            currentOffenseCode,
                                                            selectedOffenses,
                                                            setSelectedOffenses,
+                                                           setCurrentOffenseCode,
                                                            handleModifiersSelection,
                                                        }) => {
     if (!currentOffenseCode) return null;
@@ -95,6 +97,16 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
     const isHighSeverity = ['XX4', 'XX5', 'XX6'].includes(offense.severity);
     const isDutyRelatedChapter = offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X');
     const isPreparationApplicable = ['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity);
+
+    const handleBack = () => {
+        const currentIndex = selectedOffenses.findIndex((o) => o.code === currentOffenseCode);
+        if (currentIndex > 0) {
+            const previousOffense = selectedOffenses[currentIndex - 1];
+            setCurrentOffenseCode(previousOffense.code);
+        }
+    };
+
+    const isFirstOffense = selectedOffenses.findIndex((o) => o.code === currentOffenseCode) === 0;
 
     return (
         <Modal
@@ -190,7 +202,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Приготовление к преступлению</span>
                             </label>
-                            <div className="ml-6 earn-words text-gray-400 text-sm">
+                            <div className="ml-6 break-words text-gray-400 text-sm">
                                 {isPreparationApplicable ? 'Полное наказание' : 'Снятие обвинений'}
                             </div>
 
@@ -370,18 +382,28 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                 </div>
             </div>
             <div className="sticky bottom-0 bg-gray-800 py-4 flex justify-between">
-                <button
-                    onClick={handleModifiersSelection}
-                    className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-                >
-                    Далее
-                </button>
-                <button
-                    onClick={onRequestClose}
-                    className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-                >
-                    Закрыть
-                </button>
+                {!isFirstOffense && (
+                    <button
+                        onClick={handleBack}
+                        className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+                    >
+                        Назад
+                    </button>
+                )}
+                <div className="flex space-x-2">
+                    <button
+                        onClick={handleModifiersSelection}
+                        className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                    >
+                        Далее
+                    </button>
+                    <button
+                        onClick={onRequestClose}
+                        className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                    >
+                        Закрыть
+                    </button>
+                </div>
             </div>
         </Modal>
     );

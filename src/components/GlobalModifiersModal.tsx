@@ -1,6 +1,6 @@
 import React from 'react';
 import Modal from 'react-modal';
-import { GlobalModifiers } from '../types';
+import { GlobalModifiers, OffenseWithModifiers } from '../types';
 
 interface GlobalModifiersModalProps {
     isOpen: boolean;
@@ -8,6 +8,10 @@ interface GlobalModifiersModalProps {
     globalModifiers: GlobalModifiers;
     setGlobalModifiers: React.Dispatch<React.SetStateAction<GlobalModifiers>>;
     handleGlobalModifiersSelection: () => void;
+    selectedOffenses: OffenseWithModifiers[];
+    setCurrentOffenseCode: React.Dispatch<React.SetStateAction<string | null>>;
+    setIsModifiersModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsGlobalModifiersModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
@@ -16,7 +20,20 @@ const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
                                                                        globalModifiers,
                                                                        setGlobalModifiers,
                                                                        handleGlobalModifiersSelection,
+                                                                       selectedOffenses,
+                                                                       setCurrentOffenseCode,
+                                                                       setIsModifiersModalOpen,
+                                                                       setIsGlobalModifiersModalOpen,
                                                                    }) => {
+    const handleBack = () => {
+        if (selectedOffenses.length > 0) {
+            const lastOffense = selectedOffenses[selectedOffenses.length - 1];
+            setCurrentOffenseCode(lastOffense.code);
+            setIsGlobalModifiersModalOpen(false);
+            setIsModifiersModalOpen(true);
+        }
+    };
+
     return (
         <Modal
             isOpen={isOpen}
@@ -31,7 +48,13 @@ const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
                     <input
                         type="checkbox"
                         checked={globalModifiers.deal}
-                        onChange={() => setGlobalModifiers((prev) => ({ ...prev, deal: !prev.deal }))}
+                        onChange={() =>
+                            setGlobalModifiers((prev) => ({
+                                ...prev,
+                                deal: !prev.deal,
+                                dealReduction: !prev.deal ? prev.dealReduction : 0,
+                            }))
+                        }
                         className="mr-2"
                     />
                     <label>Сделка со следствием (уменьшение срока)</label>
@@ -43,10 +66,12 @@ const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
                             type="number"
                             min="0"
                             value={globalModifiers.dealReduction}
-                            onChange={(e) => {
-                                const value = parseInt(e.target.value) || 0;
-                                setGlobalModifiers((prev) => ({ ...prev, dealReduction: value }));
-                            }}
+                            onChange={(e) =>
+                                setGlobalModifiers((prev) => ({
+                                    ...prev,
+                                    dealReduction: Math.max(0, parseInt(e.target.value) || 0),
+                                }))
+                            }
                             className="p-1 bg-gray-700 rounded w-16"
                         />
                     </div>
@@ -55,7 +80,13 @@ const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
                     <input
                         type="checkbox"
                         checked={globalModifiers.recidivism}
-                        onChange={() => setGlobalModifiers((prev) => ({ ...prev, recidivism: !prev.recidivism }))}
+                        onChange={() =>
+                            setGlobalModifiers((prev) => ({
+                                ...prev,
+                                recidivism: !prev.recidivism,
+                                recidivismCount: !prev.recidivism ? prev.recidivismCount : 0,
+                            }))
+                        }
                         className="mr-2"
                     />
                     <label>Рецидив (+5 минут за каждый случай)</label>
@@ -65,29 +96,40 @@ const GlobalModifiersModal: React.FC<GlobalModifiersModalProps> = ({
                         <label className="mr-2">Количество случаев рецидива:</label>
                         <input
                             type="number"
-                            min="0"
                             value={globalModifiers.recidivismCount}
-                            onChange={(e) => {
-                                const value = parseInt(e.target.value) || 0;
-                                setGlobalModifiers((prev) => ({ ...prev, recidivismCount: value }));
-                            }}
+                            onChange={(e) =>
+                                setGlobalModifiers((prev) => ({
+                                    ...prev,
+                                    recidivismCount: Math.max(0, parseInt(e.target.value) || 0),
+                                }))
+                            }
                             className="p-1 bg-gray-700 rounded w-16"
                         />
                     </div>
                 )}
             </div>
-            <button
-                onClick={handleGlobalModifiersSelection}
-                className="mt-4 mr-2 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-            >
-                Подтвердить
-            </button>
-            <button
-                onClick={onRequestClose}
-                className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-            >
-                Закрыть
-            </button>
+            <div className="sticky bottom-0 bg-gray-800 py-4 flex justify-between">
+                <button
+                    onClick={handleBack}
+                    className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+                >
+                    Назад
+                </button>
+                <div className="flex space-x-2">
+                    <button
+                        onClick={handleGlobalModifiersSelection}
+                        className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                    >
+                        Применить
+                    </button>
+                    <button
+                        onClick={onRequestClose}
+                        className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                    >
+                        Закрыть
+                    </button>
+                </div>
+            </div>
         </Modal>
     );
 };

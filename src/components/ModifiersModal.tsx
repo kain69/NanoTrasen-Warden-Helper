@@ -28,12 +28,11 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
     const currentOffense = selectedOffenses.find((o) => o.code === currentOffenseCode);
     const modifiers = currentOffense?.modifiers || [];
 
-    // Устанавливаем модификаторы по умолчанию при первом открытии
     useEffect(() => {
         if (!isOpen || !currentOffenseCode) return;
 
         const currentOffenseMods = selectedOffenses.find((o) => o.code === currentOffenseCode);
-        if (currentOffenseMods && currentOffenseMods.modifiers.length > 0) return; // Уже есть модификаторы, не перезаписываем
+        if (currentOffenseMods && currentOffenseMods.modifiers.length > 0) return;
 
         setSelectedOffenses((prev) =>
             prev.map((offenseWithMods) => {
@@ -52,16 +51,12 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
             return prev.map((offenseWithMods) => {
                 if (offenseWithMods.code !== currentOffenseCode) return offenseWithMods;
 
-                const currentModifiers = offenseWithMods.modifiers;
-                let updatedModifiers: string[];
-
-                // Если модификатор уже выбран, снимаем его
-                if (currentModifiers.includes(modifier)) {
-                    updatedModifiers = currentModifiers.filter((m) => m !== modifier);
+                let updatedModifiers = offenseWithMods.modifiers;
+                if (updatedModifiers.includes(modifier)) {
+                    updatedModifiers = updatedModifiers.filter((m) => m !== modifier);
                 } else {
-                    updatedModifiers = [...currentModifiers, modifier];
+                    updatedModifiers = [...updatedModifiers, modifier];
 
-                    // Обеспечиваем взаимоисключение для групп модификаторов
                     const guiltModifiers = ['Преступление, совершенное умышленно', 'Преступление, совершенное по неосторожности', 'Отсутствие вины'];
                     const completionModifiers = [
                         'Оконченное преступление',
@@ -82,7 +77,6 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                         updatedModifiers = updatedModifiers.filter((m) => !complicityModifiers.includes(m) || m === modifier);
                     }
 
-                    // Взаимоисключение для "Организатор" и "Исполнитель"
                     if (modifier === 'Организатор') {
                         updatedModifiers = updatedModifiers.filter((m) => m !== 'Исполнитель');
                     }
@@ -96,7 +90,6 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
         });
     };
 
-    // Правила валидации
     const isNegligenceOrGrossNegligence = ['Халатность', 'Грубая халатность'].includes(offense.title);
     const isHighSeverity = ['XX4', 'XX5', 'XX6'].includes(offense.severity);
     const isDutyRelatedChapter = offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X');
@@ -106,18 +99,18 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
-            className="bg-gray-800 rounded-lg max-w-2xl mx-auto mt-10 text-white px-6 flex flex-col"
+            className="bg-gray-800 rounded-lg max-w-lg w-full mx-auto mt-10 text-white px-6 flex flex-col"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
-            <h2 className="text-xl font-bold mb-4 pt-6">
-                Модификаторы для статьи {offense.code} - {offense.title}
-            </h2>
+            <div className="pt-6">
+                <h2 className="text-xl font-bold mb-1">Модификаторы для статьи:</h2>
+                <div className="text-xl font-bold mb-3 border-b border-gray-700">
+                    <span className="block font-semibold">{offense.code} - {offense.title}</span>
+                </div>
+            </div>
             <div className="flex-1 overflow-y-auto max-h-[70vh] space-y-3 px-2">
-                {/* Обязательные модификаторы */}
                 <div>
                     <h3 className="text-lg font-semibold mb-2 text-gray-300">Обязательные модификаторы</h3>
-
-                    {/* Форма вины */}
                     <div>
                         <p className="font-semibold mb-1">Форма вины:</p>
                         <div className="space-y-1">
@@ -129,9 +122,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Преступление, совершенное умышленно</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Полное наказание
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -162,13 +153,10 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Отсутствие вины</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Снятие обвинений
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Снятие обвинений</div>
                         </div>
                     </div>
 
-                    {/* Стадия преступления */}
                     <div className="mt-4">
                         <p className="font-semibold mb-1">Стадия преступления:</p>
                         <div className="space-y-1">
@@ -180,9 +168,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Оконченное преступление</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Полное наказание
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -192,9 +178,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Покушение на преступление</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Полное наказание
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -204,7 +188,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Приготовление к преступлению</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
+                            <div className="ml-6 earn-words text-gray-400 text-sm">
                                 {isPreparationApplicable ? 'Полное наказание' : 'Снятие обвинений'}
                             </div>
 
@@ -216,9 +200,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Безуспешный добровольный отказ от преступления</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                -5 минут к наказанию
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">-5 минут к наказанию</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -228,13 +210,10 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Успешный добровольный отказ от преступления</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Снятие обвинений
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Снятие обвинений</div>
                         </div>
                     </div>
 
-                    {/* Форма соучастия */}
                     <div className="mt-4">
                         <p className="font-semibold mb-1">Форма соучастия:</p>
                         <div className="space-y-1">
@@ -244,13 +223,9 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                     checked={modifiers.includes('Исполнитель')}
                                     onChange={() => toggleModifier('Исполнитель')}
                                 />
-                                <span>
-                                    Исполнитель
-                                </span>
+                                <span>Исполнитель</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Полное наказание
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -260,9 +235,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Подстрекатель</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Полное наказание
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -272,9 +245,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 />
                                 <span>Пособник</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                Полное наказание
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                             <label className="flex items-center space-x-2">
                                 <input
@@ -282,21 +253,15 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                     checked={modifiers.includes('Организатор')}
                                     onChange={() => toggleModifier('Организатор')}
                                 />
-                                <span>
-                                    Организатор
-                                </span>
+                                <span>Организатор</span>
                             </label>
-                            <div className="ml-6 text-gray-400 text-sm">
-                                +10 минут к наказанию
-                            </div>
+                            <div className="ml-6 text-gray-400 text-sm">+10 минут к наказанию</div>
                         </div>
                     </div>
                 </div>
 
-                {/* Разделитель */}
                 <hr className="my-6 border-t border-gray-600" />
 
-                {/* Необязательные модификаторы */}
                 <div>
                     <h3 className="text-lg font-semibold mb-2 text-gray-300">Необязательные модификаторы</h3>
                     <div className="space-y-1">
@@ -308,9 +273,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                 disabled={isHighSeverity}
                                 className={isHighSeverity ? 'opacity-50' : ''}
                             />
-                            <span className={isHighSeverity ? 'line-through text-gray-500' : ''}>
-                                Гипноз
-                            </span>
+                            <span className={isHighSeverity ? 'line-through text-gray-500' : ''}>Гипноз</span>
                         </label>
                         <div className="ml-6 text-gray-400 text-sm">
                             Снятие обвинений
@@ -329,9 +292,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                             />
                             <span>Крайняя необходимость</span>
                         </label>
-                        <div className="ml-6 text-gray-400 text-sm">
-                            Снятие обвинений
-                        </div>
+                        <div className="ml-6 text-gray-400 text-sm">Снятие обвинений</div>
 
                         <label className="flex items-center space-x-2">
                             <input
@@ -341,9 +302,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                             />
                             <span>Допустимая самооборона</span>
                         </label>
-                        <div className="ml-6 text-gray-400 text-sm">
-                            Снятие обвинений
-                        </div>
+                        <div className="ml-6 text-gray-400 text-sm">Снятие обвинений</div>
 
                         <label className="flex items-center space-x-2">
                             <input
@@ -353,9 +312,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                             />
                             <span>Манипулирование синтетиками</span>
                         </label>
-                        <div className="ml-6 text-gray-400 text-sm">
-                            Полное наказание
-                        </div>
+                        <div className="ml-6 text-gray-400 text-sm">Полное наказание</div>
 
                         <label className="flex items-center space-x-2">
                             <input
@@ -365,9 +322,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                             />
                             <span>Должностное преступление</span>
                         </label>
-                        <div className="ml-6 text-gray-400 text-sm">
-                            +10 минут к наказанию
-                        </div>
+                        <div className="ml-6 text-gray-400 text-sm">+10 минут к наказанию</div>
 
                         <label className="flex items-center space-x-2">
                             <input
@@ -398,9 +353,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                             />
                             <span>Расизм</span>
                         </label>
-                        <div className="ml-6 text-gray-400 text-sm">
-                            +10 минут к наказанию
-                        </div>
+                        <div className="ml-6 text-gray-400 text-sm">+10 минут к наказанию</div>
 
                         <label className="flex items-center space-x-2">
                             <input
@@ -410,9 +363,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                             />
                             <span>Явка с повинной</span>
                         </label>
-                        <div className="ml-6 text-gray-400 text-sm">
-                            -5 минут к наказанию
-                        </div>
+                        <div className="ml-6 text-gray-400 text-sm">-5 минут к наказанию</div>
                     </div>
                 </div>
             </div>

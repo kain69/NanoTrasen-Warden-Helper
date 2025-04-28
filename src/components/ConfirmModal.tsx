@@ -13,6 +13,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onRequestClose, onC
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
+            shouldCloseOnOverlayClick={false}
             className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >

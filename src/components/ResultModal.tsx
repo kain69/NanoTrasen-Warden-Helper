@@ -23,6 +23,7 @@ const ResultModal: React.FC<ResultModalProps> = ({
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
+            shouldCloseOnOverlayClick={false}
             className="bg-gray-800 p-6 rounded-lg max-w-2xl mx-auto mt-10 text-white px-6 flex flex-col"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >

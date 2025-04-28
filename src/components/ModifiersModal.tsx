@@ -28,6 +28,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
     const currentOffense = selectedOffenses.find((o) => o.code === currentOffenseCode);
     const modifiers = currentOffense?.modifiers || [];
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useEffect(() => {
         if (!isOpen || !currentOffenseCode) return;
 
@@ -99,6 +100,7 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
+            shouldCloseOnOverlayClick={false}
             className="bg-gray-800 rounded-lg max-w-lg w-full mx-auto mt-10 text-white px-6 flex flex-col"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >

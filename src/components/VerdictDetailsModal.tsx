@@ -44,6 +44,7 @@ const VerdictDetailsModal: React.FC<VerdictDetailsModalProps> = ({
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
+            shouldCloseOnOverlayClick={false}
             className="bg-gray-800 rounded-lg max-w-2xl w-full mx-auto mt-10 text-white px-6 flex flex-col"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >

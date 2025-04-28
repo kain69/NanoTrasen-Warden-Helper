@@ -29,6 +29,7 @@ const VerdictHistoryModal: React.FC<VerdictHistoryModalProps> = ({
             <Modal
                 isOpen={isOpen}
                 onRequestClose={onRequestClose}
+                shouldCloseOnOverlayClick={false}
                 className="bg-gray-800 rounded-lg w-[32rem] h-[80vh] mx-auto mt-10 text-white flex flex-col"
                 overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
             >

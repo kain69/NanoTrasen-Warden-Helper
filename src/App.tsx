@@ -56,6 +56,7 @@ const App: React.FC = () => {
         isDeathPenalty: boolean;
         xx5Count: number;
     } | null>(null);
+    const [showSeconds, setShowSeconds] = useState<boolean>(false);
 
     useEffect(() => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -139,7 +140,9 @@ const App: React.FC = () => {
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        const currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const currentTime = showSeconds
+            ? `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+            : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 
         const currentDate = new Date();
         currentDate.setFullYear(currentDate.getFullYear() + 1000);
@@ -621,6 +624,8 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 setStartTimeInput={setStartTimeInput}
                 baseStartSeconds={baseStartSeconds}
                 setBaseStartSeconds={setBaseStartSeconds}
+                showSeconds={showSeconds}
+                setShowSeconds={setShowSeconds}
             />
 
             <ObjectDetails objectDetails={objectDetails} setObjectDetails={setObjectDetails} />

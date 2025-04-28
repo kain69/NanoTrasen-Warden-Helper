@@ -14,6 +14,8 @@ interface SettingsModalProps {
     setStartTimeInput: React.Dispatch<React.SetStateAction<string>>;
     baseStartSeconds: number;
     setBaseStartSeconds: React.Dispatch<React.SetStateAction<number>>;
+    showSeconds: boolean; // Новое пропс для управления отображением секунд
+    setShowSeconds: React.Dispatch<React.SetStateAction<boolean>>; // Новое пропс для изменения состояния
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -27,6 +29,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                          setStartTimeInput,
                                                          baseStartSeconds,
                                                          setBaseStartSeconds,
+                                                         showSeconds,
+                                                         setShowSeconds,
                                                      }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -39,9 +43,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes
-            .toString()
-            .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        if (showSeconds) {
+            return `${hours.toString().padStart(2, '0')}:${minutes
+                .toString()
+                .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
 
     const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,6 +179,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             {currentTime}
                         </div>
                     </div>
+                </div>
+                {/* Добавляем чекбокс для управления отображением секунд */}
+                <div className="mt-2">
+                    <label className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            checked={showSeconds}
+                            onChange={(e) => setShowSeconds(e.target.checked)}
+                            className="h-4 w-4 text-blue-600 bg-gray-700 rounded"
+                        />
+                        <span>Показывать секунды</span>
+                    </label>
                 </div>
             </div>
             <button

@@ -42,32 +42,36 @@ const VerdictHistoryModal: React.FC<VerdictHistoryModalProps> = ({
                     {verdictHistory.length === 0 ? (
                         <p className="text-gray-400">История пуста.</p>
                     ) : (
-                        verdictHistory.map((entry) => (
-                            <div
-                                key={entry.id}
-                                className="border-b border-gray-600 pb-4 mb-4 cursor-pointer hover:bg-gray-700 p-2 rounded"
-                                onClick={() => setSelectedVerdict(entry)}
-                            >
-                                <p><strong>ФИО:</strong> {entry.fullName}</p>
-                                <p><strong>Должность:</strong> {entry.position}</p>
-                                <p><strong>Срок:</strong> {entry.penalty}</p>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDelete(entry.id);
-                                    }}
-                                    className="mt-2 px-3 py-1 bg-red-600 rounded hover:bg-red-700 text-sm"
+                        verdictHistory.map((entry, index) => {
+                            const entryNumber = verdictHistory.length - index; // Нумерация: новые записи сверху
+                            return (
+                                <div
+                                    key={entry.id}
+                                    className="border-b border-gray-600 pb-4 mb-4 cursor-pointer hover:bg-gray-700 p-2 rounded"
+                                    onClick={() => setSelectedVerdict(entry)}
                                 >
-                                    Удалить
-                                </button>
-                            </div>
-                        ))
+                                    <p className="font-semibold text-sm border-b border-gray-600">Приговор №{entryNumber}</p>
+                                    <p><strong>ФИО:</strong> {entry.fullName}</p>
+                                    <p><strong>Должность:</strong> {entry.position}</p>
+                                    <p><strong>Срок:</strong> {entry.penalty}</p>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(entry.id);
+                                        }}
+                                        className="mt-2 px-3 py-1 bg-red-600 rounded hover:bg-red-700 text-sm"
+                                    >
+                                        Удалить
+                                    </button>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
                 <div className="sticky bottom-0 bg-gray-800 py-4 px-6 flex justify-end space-x-2">
                     <button
                         onClick={handleClearAll}
-                        className="px-4 py-2 bg-yellow-700 rounded hover:bg-yellow-800"
+                        className="px-4 py-2 bg-orange-600 rounded hover:bg-orange-700"
                     >
                         Очистить всё
                     </button>

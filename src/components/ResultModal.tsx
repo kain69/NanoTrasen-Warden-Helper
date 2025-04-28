@@ -35,7 +35,7 @@ const ResultModal: React.FC<ResultModalProps> = ({
                 <p className="mb-4">
                     <strong>Административное наказание:</strong> {result.disciplinaryPenalty}
                 </p>
-                <pre className="bg-gray-700 p-4 rounded whitespace-pre-wrap break-words">
+                <pre className="bg-gray-700 p-4 rounded whitespace-pre-wrap break-words text-xs leading-tight">
                     {result.documentText}
                 </pre>
             </div>

@@ -204,8 +204,7 @@ const App: React.FC = () => {
         currentDate.setFullYear(currentDate.getFullYear() + 1000);
         const gameDate = currentDate.toLocaleDateString('ru-RU');
 
-        const documentText = `
-[color=#982a2d]███░███░░░░██░░░░[/color]
+        const documentText = `[color=#982a2d]███░███░░░░██░░░░[/color]
 [color=#982a2d]░██░████░░██░░░░[/color]        [head=3]Бланк документа[/head]
 [color=#982a2d]░░█░██░██░░██░█░░[/color]                [head=3]NanoTrasen[/head]
 [color=#982a2d]░░░░██░░██░██░██░[/color]           [bold]${settings.station} СБ[/bold]

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import Modal from 'react-modal';
 import { Settings, Timer } from '../types';
-import { positionGroups } from '../data/positions';
+import { settingsPositionGroups } from '../data/positions'; // Импортируем settingsPositionGroups вместо positionGroups
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -14,8 +14,8 @@ interface SettingsModalProps {
     setStartTimeInput: React.Dispatch<React.SetStateAction<string>>;
     baseStartSeconds: number;
     setBaseStartSeconds: React.Dispatch<React.SetStateAction<number>>;
-    showSeconds: boolean; // Новое пропс для управления отображением секунд
-    setShowSeconds: React.Dispatch<React.SetStateAction<boolean>>; // Новое пропс для изменения состояния
+    showSeconds: boolean;
+    setShowSeconds: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -130,7 +130,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <option value="" disabled>
                             Выберите должность
                         </option>
-                        {positionGroups.map((group) => (
+                        {settingsPositionGroups.map((group) => (
                             <optgroup key={group.label} label={group.label}>
                                 {group.positions.map((position) => (
                                     <option key={position.value} value={position.label}>
@@ -180,7 +180,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                     </div>
                 </div>
-                {/* Добавляем чекбокс для управления отображением секунд */}
                 <div className="mt-2">
                     <label className="flex items-center space-x-2">
                         <input

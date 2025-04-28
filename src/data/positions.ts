@@ -8,7 +8,7 @@ export interface PositionGroup {
     positions: Position[];
 }
 
-export const positionGroups: PositionGroup[] = [
+export const objectPositionGroups: PositionGroup[] = [
     {
         label: 'Командование',
         positions: [
@@ -108,6 +108,39 @@ export const positionGroups: PositionGroup[] = [
             { value: '54', label: 'Офицер "Синий Щит"' },
             { value: '55', label: 'Бригмедик' },
             { value: '56', label: 'Исследователь экспедиции' },
+            { value: '57', label: 'Представитель ЦК' },
+            { value: '58', label: 'Оператор ЦК' },
+            { value: '59', label: 'Офицер специальных операций' },
+        ],
+    },
+];
+
+export const settingsPositionGroups: PositionGroup[] = [
+    {
+        label: 'Командование',
+        positions: [
+            { value: '1', label: 'Капитан' },
+            { value: '3', label: 'Глава службы безопасности' },
+        ],
+    },
+    {
+        label: 'Отдел Службы Безопасности',
+        positions: [
+            { value: '8', label: 'Смотритель' },
+            { value: '9', label: 'Детектив' },
+            { value: '10', label: 'Офицер СБ' },
+            { value: '11', label: 'Пилот СБ' },
+        ],
+    },
+    {
+        label: 'Юридический Департамент',
+        positions: [
+            { value: '40', label: 'Магистрат' },
+        ],
+    },
+    {
+        label: 'Центральное Командование и ДСО',
+        positions: [
             { value: '57', label: 'Представитель ЦК' },
             { value: '58', label: 'Оператор ЦК' },
             { value: '59', label: 'Офицер специальных операций' },

@@ -5,9 +5,6 @@ import SettingsModal from './components/SettingsModal';
 import ObjectDetails from './components/ObjectDetails';
 import OffensesTable from './components/OffensesTable';
 import SelectedOffensesList from './components/SelectedOffensesList';
-import GuiltModal from './components/GuiltModal';
-import CompletionModal from './components/CompletionModal';
-import ComplicityModal from './components/ComplicityModal';
 import ModifiersModal from './components/ModifiersModal';
 import GlobalModifiersModal from './components/GlobalModifiersModal';
 import ResultModal from './components/ResultModal';
@@ -27,9 +24,6 @@ Modal.setAppElement('#root');
 const App: React.FC = () => {
     const [selectedOffenses, setSelectedOffenses] = useState<OffenseWithModifiers[]>([]);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-    const [isGuiltModalOpen, setIsGuiltModalOpen] = useState(false);
-    const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
-    const [isComplicityModalOpen, setIsComplicityModalOpen] = useState(false);
     const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
     const [isGlobalModifiersModalOpen, setIsGlobalModifiersModalOpen] = useState(false);
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
@@ -37,9 +31,6 @@ const App: React.FC = () => {
     const [warningMessage, setWarningMessage] = useState('');
     const [currentOffenseCode, setCurrentOffenseCode] = useState<string | null>(null);
     const [isResultModalOpen, setIsResultModalOpen] = useState(false);
-    const [guilt, setGuilt] = useState<string | null>(null);
-    const [completion, setCompletion] = useState<string | null>(null);
-    const [complicity, setComplicity] = useState<string | null>(null);
     const [globalModifiers, setGlobalModifiers] = useState<GlobalModifiers>({
         deal: false,
         dealReduction: 0,
@@ -114,33 +105,13 @@ const App: React.FC = () => {
         setIsModifiersModalOpen(true);
     };
 
-    const openGuiltModal = () => {
+    const openVerdictProcess = () => {
         if (selectedOffenses.length === 0) {
             alert('Пожалуйста, выберите хотя бы одну статью.');
             return;
         }
-        setIsGuiltModalOpen(true);
-    };
-
-    const handleGuiltSelection = (guiltType: string) => {
-        setGuilt(guiltType);
-        setIsGuiltModalOpen(false);
-        setIsCompletionModalOpen(true);
-    };
-
-    const handleCompletionSelection = (completionType: string) => {
-        setCompletion(completionType);
-        setIsCompletionModalOpen(false);
-        setIsComplicityModalOpen(true);
-    };
-
-    const handleComplicitySelection = (complicityType: string) => {
-        setComplicity(complicityType);
-        setIsComplicityModalOpen(false);
-        if (selectedOffenses.length > 0) {
-            setCurrentOffenseCode(selectedOffenses[0].code);
-            setIsModifiersModalOpen(true);
-        }
+        setCurrentOffenseCode(selectedOffenses[0].code);
+        setIsModifiersModalOpen(true);
     };
 
     const handleModifiersSelection = () => {
@@ -168,14 +139,9 @@ const App: React.FC = () => {
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        console.log(hours);
-        console.log(minutes);
-        console.log(seconds);
-        console.log(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
         const currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
         const currentDate = new Date();
-        currentDate.setFullYear(currentDate.getFullYear() + 1000);
         currentDate.setFullYear(currentDate.getFullYear() + 1000);
         const gameDate = currentDate.toLocaleDateString('ru-RU');
 
@@ -217,8 +183,6 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
     };
 
     const calculateVerdict = () => {
-        if (!guilt || !completion || !complicity) return;
-
         const chapters: Record<string, OffenseWithModifiers[]> = {};
         selectedOffenses.forEach((offenseWithMods) => {
             const offense = offenses.find((o) => o.code === offenseWithMods.code);
@@ -261,40 +225,74 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 maxSeverity = offense.severity;
             }
 
-            if (guilt === 'Преступление, совершенное по неосторожности') {
-                if (!['Халатность', 'Грубая халатность'].includes(offense.title)) {
+            // Правила валидации
+            const isNegligenceOrGrossNegligence = ['Халатность', 'Грубая халатность'].includes(offense.title);
+            const isHighSeverity = ['XX4', 'XX5', 'XX6'].includes(offense.severity);
+            const isDutyRelatedChapter = offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X');
+            const isExecutor = offenseWithMods.modifiers.includes('Исполнитель');
+            const isOrganizer = offenseWithMods.modifiers.includes('Организатор');
+
+            // Применение модификаторов на уровне статьи
+            if (offenseWithMods.modifiers.includes('Преступление, совершенное умышленно')) {
+                appliedModifiers.push('Преступление, совершенное умышленно (полное наказание)');
+            }
+            if (offenseWithMods.modifiers.includes('Преступление, совершенное по неосторожности')) {
+                if (!isNegligenceOrGrossNegligence) {
                     minutes = Math.max(0, minutes - 5);
                     appliedModifiers.push('Преступление, совершенное по неосторожности (-5 минут)');
                 }
             }
+            if (offenseWithMods.modifiers.includes('Отсутствие вины')) {
+                minutes = 0;
+                appliedModifiers.push('Отсутствие вины (снятие обвинений)');
+            }
 
-            if (completion === 'Покушение на преступление') {
+            if (offenseWithMods.modifiers.includes('Оконченное преступление')) {
+                appliedModifiers.push('Оконченное преступление (полное наказание)');
+            }
+            if (offenseWithMods.modifiers.includes('Покушение на преступление')) {
                 appliedModifiers.push('Покушение на преступление (полное наказание)');
-            } else if (completion === 'Приготовление к преступлению') {
+            }
+            if (offenseWithMods.modifiers.includes('Приготовление к преступлению')) {
                 if (['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity)) {
                     appliedModifiers.push('Приготовление к преступлению (полное наказание)');
                 } else {
                     minutes = 0;
                     appliedModifiers.push('Приготовление к преступлению (снятие обвинения)');
                 }
-            } else if (completion === 'Безуспешный добровольный отказ от преступления') {
+            }
+            if (offenseWithMods.modifiers.includes('Безуспешный добровольный отказ от преступления')) {
                 minutes = Math.max(0, minutes - 5);
                 appliedModifiers.push('Безуспешный добровольный отказ от преступления (-5 минут)');
-            } else if (completion === 'Успешный добровольный отказ от преступления') {
+            }
+            if (offenseWithMods.modifiers.includes('Успешный добровольный отказ от преступления')) {
                 minutes = 0;
                 appliedModifiers.push('Успешный добровольный отказ от преступления (снятие обвинений)');
             }
 
-            if (complicity === 'Организатор') {
-                minutes += 10;
-                appliedModifiers.push('Организатор (+10 минут)');
-            } else {
-                appliedModifiers.push(`${complicity} (полное наказание)`);
+            if (offenseWithMods.modifiers.includes('Организатор')) {
+                if (!isExecutor) {
+                    minutes += 10;
+                    appliedModifiers.push('Организатор (+10 минут)');
+                }
+            }
+            if (offenseWithMods.modifiers.includes('Исполнитель')) {
+                if (!isOrganizer) {
+                    appliedModifiers.push('Исполнитель (полное наказание)');
+                }
+            }
+            if (offenseWithMods.modifiers.includes('Подстрекатель')) {
+                appliedModifiers.push('Подстрекатель (полное наказание)');
+            }
+            if (offenseWithMods.modifiers.includes('Пособник')) {
+                appliedModifiers.push('Пособник (полное наказание)');
             }
 
             if (offenseWithMods.modifiers.includes('Гипноз')) {
-                minutes = 0;
-                appliedModifiers.push('Гипноз (снятие обвинений)');
+                if (!isHighSeverity) {
+                    minutes = 0;
+                    appliedModifiers.push('Гипноз (снятие обвинений)');
+                }
             }
             if (offenseWithMods.modifiers.includes('Крайняя необходимость')) {
                 minutes = 0;
@@ -312,7 +310,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 appliedModifiers.push('Должностное преступление (+10 минут)');
             }
             if (offenseWithMods.modifiers.includes('Преступление против должностного лица')) {
-                if (offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X')) {
+                if (isDutyRelatedChapter) {
                     minutes += 10;
                     appliedModifiers.push('Преступление против должностного лица (+10 минут)');
                 }
@@ -337,6 +335,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             );
         });
 
+        // Применение глобальных модификаторов (только Рецидив и Сделка со следствием)
         if (globalModifiers.deal && globalModifiers.dealReduction > 0) {
             totalMinutes = Math.max(0, totalMinutes - globalModifiers.dealReduction);
             offenseDetails.push(`Сделка со следствием (-${globalModifiers.dealReduction} минут)`);
@@ -348,13 +347,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         }
 
         let finalPenalty = '';
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
+        if (totalMinutes === 0) {
             finalPenalty = 'Снятие обвинений';
         } else if (isDeathPenalty) {
             finalPenalty = 'Высшая мера наказания';
@@ -380,13 +373,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         }
 
         let disciplinaryPenalty = '';
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
+        if (totalMinutes === 0) {
             disciplinaryPenalty = 'Не предусмотрено';
         } else if (finalPenalty === 'Высшая мера наказания' || finalPenalty === 'Пожизненное заключение') {
             disciplinaryPenalty = 'Увольнение';
@@ -474,13 +461,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         let finalPenalty = '';
         let disciplinaryPenalty = '';
 
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
+        if (totalMinutes === 0) {
             finalPenalty = 'Снятие обвинений';
             disciplinaryPenalty = 'Не предусмотрено';
         } else if (isDeathPenalty) {
@@ -574,13 +555,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
         let finalPenalty = '';
         let disciplinaryPenalty = '';
 
-        if (
-            guilt === 'Отсутствие вины' ||
-            completion === 'Успешный добровольный отказ от преступления' ||
-            selectedOffenses.some((o) => o.modifiers.includes('Гипноз')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Крайняя необходимость')) ||
-            selectedOffenses.some((o) => o.modifiers.includes('Допустимая самооборона'))
-        ) {
+        if (totalMinutes === 0) {
             finalPenalty = 'Снятие обвинений';
             disciplinaryPenalty = 'Не предусмотрено';
         } else if (isDeathPenalty) {
@@ -659,32 +634,11 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
             />
 
             <button
-                onClick={openGuiltModal}
+                onClick={openVerdictProcess}
                 className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
             >
                 Вынести вердикт
             </button>
-
-            <GuiltModal
-                isOpen={isGuiltModalOpen}
-                onRequestClose={() => setIsGuiltModalOpen(false)}
-                handleGuiltSelection={handleGuiltSelection}
-                selectedOffenses={selectedOffenses}
-            />
-
-            <CompletionModal
-                isOpen={isCompletionModalOpen}
-                onRequestClose={() => setIsCompletionModalOpen(false)}
-                handleCompletionSelection={handleCompletionSelection}
-                selectedOffenses={selectedOffenses}
-            />
-
-            <ComplicityModal
-                isOpen={isComplicityModalOpen}
-                onRequestClose={() => setIsComplicityModalOpen(false)}
-                handleComplicitySelection={handleComplicitySelection}
-                selectedOffenses={selectedOffenses}
-            />
 
             <ModifiersModal
                 isOpen={isModifiersModalOpen}

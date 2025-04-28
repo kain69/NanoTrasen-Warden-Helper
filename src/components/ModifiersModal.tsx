@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Modal from 'react-modal';
-import { modifierOptions, offenses } from '../data/offenses';
+import { offenses } from '../data/offenses';
 import { OffenseWithModifiers } from '../types';
 
 interface ModifiersModalProps {
@@ -20,103 +20,416 @@ const ModifiersModal: React.FC<ModifiersModalProps> = ({
                                                            setSelectedOffenses,
                                                            handleModifiersSelection,
                                                        }) => {
-    const getOffenseTitle = (code: string | null): string => {
-        const offense = offenses.find((o) => o.code === code);
-        return offense ? offense.title : '';
+    if (!currentOffenseCode) return null;
+
+    const offense = offenses.find((o) => o.code === currentOffenseCode);
+    if (!offense) return null;
+
+    const currentOffense = selectedOffenses.find((o) => o.code === currentOffenseCode);
+    const modifiers = currentOffense?.modifiers || [];
+
+    // Устанавливаем модификаторы по умолчанию при первом открытии
+    useEffect(() => {
+        if (!isOpen || !currentOffenseCode) return;
+
+        const currentOffenseMods = selectedOffenses.find((o) => o.code === currentOffenseCode);
+        if (currentOffenseMods && currentOffenseMods.modifiers.length > 0) return; // Уже есть модификаторы, не перезаписываем
+
+        setSelectedOffenses((prev) =>
+            prev.map((offenseWithMods) => {
+                if (offenseWithMods.code !== currentOffenseCode) return offenseWithMods;
+
+                return {
+                    ...offenseWithMods,
+                    modifiers: ['Преступление, совершенное умышленно', 'Оконченное преступление', 'Исполнитель'],
+                };
+            })
+        );
+    }, [isOpen, currentOffenseCode, selectedOffenses, setSelectedOffenses]);
+
+    const toggleModifier = (modifier: string) => {
+        setSelectedOffenses((prev) => {
+            return prev.map((offenseWithMods) => {
+                if (offenseWithMods.code !== currentOffenseCode) return offenseWithMods;
+
+                const currentModifiers = offenseWithMods.modifiers;
+                let updatedModifiers: string[];
+
+                // Если модификатор уже выбран, снимаем его
+                if (currentModifiers.includes(modifier)) {
+                    updatedModifiers = currentModifiers.filter((m) => m !== modifier);
+                } else {
+                    updatedModifiers = [...currentModifiers, modifier];
+
+                    // Обеспечиваем взаимоисключение для групп модификаторов
+                    const guiltModifiers = ['Преступление, совершенное умышленно', 'Преступление, совершенное по неосторожности', 'Отсутствие вины'];
+                    const completionModifiers = [
+                        'Оконченное преступление',
+                        'Покушение на преступление',
+                        'Приготовление к преступлению',
+                        'Безуспешный добровольный отказ от преступления',
+                        'Успешный добровольный отказ от преступления',
+                    ];
+                    const complicityModifiers = ['Организатор', 'Исполнитель', 'Подстрекатель', 'Пособник'];
+
+                    if (guiltModifiers.includes(modifier)) {
+                        updatedModifiers = updatedModifiers.filter((m) => !guiltModifiers.includes(m) || m === modifier);
+                    }
+                    if (completionModifiers.includes(modifier)) {
+                        updatedModifiers = updatedModifiers.filter((m) => !completionModifiers.includes(m) || m === modifier);
+                    }
+                    if (complicityModifiers.includes(modifier)) {
+                        updatedModifiers = updatedModifiers.filter((m) => !complicityModifiers.includes(m) || m === modifier);
+                    }
+
+                    // Взаимоисключение для "Организатор" и "Исполнитель"
+                    if (modifier === 'Организатор') {
+                        updatedModifiers = updatedModifiers.filter((m) => m !== 'Исполнитель');
+                    }
+                    if (modifier === 'Исполнитель') {
+                        updatedModifiers = updatedModifiers.filter((m) => m !== 'Организатор');
+                    }
+                }
+
+                return { ...offenseWithMods, modifiers: updatedModifiers };
+            });
+        });
     };
 
-    const currentOffense = offenses.find((o) => o.code === currentOffenseCode);
-    const isCrimeAgainstOfficialApplicable = currentOffense && (currentOffense.chapter.startsWith('21X') || currentOffense.chapter.startsWith('22X'));
+    // Правила валидации
+    const isNegligenceOrGrossNegligence = ['Халатность', 'Грубая халатность'].includes(offense.title);
+    const isHighSeverity = ['XX4', 'XX5', 'XX6'].includes(offense.severity);
+    const isDutyRelatedChapter = offense.chapter.startsWith('21X') || offense.chapter.startsWith('22X');
+    const isPreparationApplicable = ['XX3', 'XX4', 'XX5', 'XX6'].includes(offense.severity);
 
     return (
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
-            className="bg-gray-800 p-6 rounded-lg max-w-md mx-auto mt-20 text-white"
+            className="bg-gray-800 rounded-lg max-w-2xl mx-auto mt-10 text-white px-6 flex flex-col"
             overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
         >
-            <style>
-                {`
-                    .tooltip {
-                        position: relative;
-                        display: inline-block;
-                        width: 100%;
-                    }
-                    .tooltip .tooltiptext {
-                        visibility: hidden;
-                        width: 200px;
-                        background-color: #555;
-                        color: #fff;
-                        text-align: center;
-                        border-radius: 6px;
-                        padding: 5px;
-                        position: absolute;
-                        z-index: 1;
-                        bottom: 125%;
-                        left: 50%;
-                        margin-left: -100px;
-                        opacity: 0;
-                        transition: opacity 0.3s;
-                    }
-                    .tooltip:hover .tooltiptext {
-                        visibility: visible;
-                        opacity: 1;
-                    }
-                `}
-            </style>
-            <h2 className="text-xl font-bold mb-4">
-                Модификаторы для статьи {currentOffenseCode} - {getOffenseTitle(currentOffenseCode)}
+            <h2 className="text-xl font-bold mb-4 pt-6">
+                Модификаторы для статьи {offense.code} - {offense.title}
             </h2>
-            <div className="space-y-2">
-                {modifierOptions.map((modifier) => {
-                    const isDisabled = modifier.name === 'Преступление против должностного лица' && !isCrimeAgainstOfficialApplicable;
-                    return (
-                        <div key={modifier.name} className={`flex items-center ${isDisabled ? 'tooltip' : ''}`}>
+            <div className="flex-1 overflow-y-auto max-h-[70vh] space-y-3 px-2">
+                {/* Обязательные модификаторы */}
+                <div>
+                    <h3 className="text-lg font-semibold mb-2 text-gray-300">Обязательные модификаторы</h3>
+
+                    {/* Форма вины */}
+                    <div>
+                        <p className="font-semibold mb-1">Форма вины:</p>
+                        <div className="space-y-1">
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Преступление, совершенное умышленно')}
+                                    onChange={() => toggleModifier('Преступление, совершенное умышленно')}
+                                />
+                                <span>Преступление, совершенное умышленно</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Полное наказание
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Преступление, совершенное по неосторожности')}
+                                    onChange={() => toggleModifier('Преступление, совершенное по неосторожности')}
+                                    disabled={isNegligenceOrGrossNegligence}
+                                    className={isNegligenceOrGrossNegligence ? 'opacity-50' : ''}
+                                />
+                                <span className={isNegligenceOrGrossNegligence ? 'line-through text-gray-500' : ''}>
+                                    Преступление, совершенное по неосторожности
+                                </span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                -5 минут к наказанию
+                                {isNegligenceOrGrossNegligence && (
+                                    <div className="text-red-400 text-sm">
+                                        Недоступно для статей "Халатность" и "Грубая халатность"
+                                    </div>
+                                )}
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Отсутствие вины')}
+                                    onChange={() => toggleModifier('Отсутствие вины')}
+                                />
+                                <span>Отсутствие вины</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Снятие обвинений
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Стадия преступления */}
+                    <div className="mt-4">
+                        <p className="font-semibold mb-1">Стадия преступления:</p>
+                        <div className="space-y-1">
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Оконченное преступление')}
+                                    onChange={() => toggleModifier('Оконченное преступление')}
+                                />
+                                <span>Оконченное преступление</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Полное наказание
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Покушение на преступление')}
+                                    onChange={() => toggleModifier('Покушение на преступление')}
+                                />
+                                <span>Покушение на преступление</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Полное наказание
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Приготовление к преступлению')}
+                                    onChange={() => toggleModifier('Приготовление к преступлению')}
+                                />
+                                <span>Приготовление к преступлению</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                {isPreparationApplicable ? 'Полное наказание' : 'Снятие обвинений'}
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Безуспешный добровольный отказ от преступления')}
+                                    onChange={() => toggleModifier('Безуспешный добровольный отказ от преступления')}
+                                />
+                                <span>Безуспешный добровольный отказ от преступления</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                -5 минут к наказанию
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Успешный добровольный отказ от преступления')}
+                                    onChange={() => toggleModifier('Успешный добровольный отказ от преступления')}
+                                />
+                                <span>Успешный добровольный отказ от преступления</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Снятие обвинений
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Форма соучастия */}
+                    <div className="mt-4">
+                        <p className="font-semibold mb-1">Форма соучастия:</p>
+                        <div className="space-y-1">
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Исполнитель')}
+                                    onChange={() => toggleModifier('Исполнитель')}
+                                />
+                                <span>
+                                    Исполнитель
+                                </span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Полное наказание
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Подстрекатель')}
+                                    onChange={() => toggleModifier('Подстрекатель')}
+                                />
+                                <span>Подстрекатель</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Полное наказание
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Пособник')}
+                                    onChange={() => toggleModifier('Пособник')}
+                                />
+                                <span>Пособник</span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                Полное наказание
+                            </div>
+
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={modifiers.includes('Организатор')}
+                                    onChange={() => toggleModifier('Организатор')}
+                                />
+                                <span>
+                                    Организатор
+                                </span>
+                            </label>
+                            <div className="ml-6 text-gray-400 text-sm">
+                                +10 минут к наказанию
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Разделитель */}
+                <hr className="my-6 border-t border-gray-600" />
+
+                {/* Необязательные модификаторы */}
+                <div>
+                    <h3 className="text-lg font-semibold mb-2 text-gray-300">Необязательные модификаторы</h3>
+                    <div className="space-y-1">
+                        <label className="flex items-center space-x-2">
                             <input
                                 type="checkbox"
-                                checked={
-                                    selectedOffenses
-                                        .find((o) => o.code === currentOffenseCode)
-                                        ?.modifiers.includes(modifier.name) || false
-                                }
-                                onChange={() => {
-                                    if (isDisabled) return;
-                                    setSelectedOffenses((prev) =>
-                                        prev.map((o) =>
-                                            o.code === currentOffenseCode
-                                                ? {
-                                                    ...o,
-                                                    modifiers: o.modifiers.includes(modifier.name)
-                                                        ? o.modifiers.filter((m) => m !== modifier.name)
-                                                        : [...o.modifiers, modifier.name],
-                                                }
-                                                : o
-                                        )
-                                    );
-                                }}
-                                className="mr-2"
-                                disabled={isDisabled}
+                                checked={modifiers.includes('Гипноз')}
+                                onChange={() => toggleModifier('Гипноз')}
+                                disabled={isHighSeverity}
+                                className={isHighSeverity ? 'opacity-50' : ''}
                             />
-                            <label className={isDisabled ? 'text-gray-400' : ''}>
-                                {`${modifier.name} (${modifier.description})`}
-                            </label>
-                            {isDisabled && <span className="tooltiptext">не применимо для данной статьи</span>}
+                            <span className={isHighSeverity ? 'line-through text-gray-500' : ''}>
+                                Гипноз
+                            </span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            Снятие обвинений
+                            {isHighSeverity && (
+                                <div className="text-red-400 text-sm">
+                                    Недоступно для статей с тяжестью XX4, XX5, XX6
+                                </div>
+                            )}
                         </div>
-                    );
-                })}
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Крайняя необходимость')}
+                                onChange={() => toggleModifier('Крайняя необходимость')}
+                            />
+                            <span>Крайняя необходимость</span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            Снятие обвинений
+                        </div>
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Допустимая самооборона')}
+                                onChange={() => toggleModifier('Допустимая самооборона')}
+                            />
+                            <span>Допустимая самооборона</span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            Снятие обвинений
+                        </div>
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Манипулирование синтетиками')}
+                                onChange={() => toggleModifier('Манипулирование синтетиками')}
+                            />
+                            <span>Манипулирование синтетиками</span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            Полное наказание
+                        </div>
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Должностное преступление')}
+                                onChange={() => toggleModifier('Должностное преступление')}
+                            />
+                            <span>Должностное преступление</span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            +10 минут к наказанию
+                        </div>
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Преступление против должностного лица')}
+                                onChange={() => toggleModifier('Преступление против должностного лица')}
+                                disabled={!isDutyRelatedChapter}
+                                className={!isDutyRelatedChapter ? 'opacity-50' : ''}
+                            />
+                            <span className={!isDutyRelatedChapter ? 'line-through text-gray-500' : ''}>
+                                Преступление против должностного лица
+                            </span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            +10 минут к наказанию
+                            {!isDutyRelatedChapter && (
+                                <div className="text-red-400 text-sm">
+                                    Недоступно, применимо только к главам 21X и 22X
+                                </div>
+                            )}
+                        </div>
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Расизм')}
+                                onChange={() => toggleModifier('Расизм')}
+                            />
+                            <span>Расизм</span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            +10 минут к наказанию
+                        </div>
+
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={modifiers.includes('Явка с повинной')}
+                                onChange={() => toggleModifier('Явка с повинной')}
+                            />
+                            <span>Явка с повинной</span>
+                        </label>
+                        <div className="ml-6 text-gray-400 text-sm">
+                            -5 минут к наказанию
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button
-                onClick={handleModifiersSelection}
-                className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-            >
-                Подтвердить
-            </button>
-            <button
-                onClick={onRequestClose}
-                className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-            >
-                Закрыть
-            </button>
+            <div className="sticky bottom-0 bg-gray-800 py-4 flex justify-between">
+                <button
+                    onClick={handleModifiersSelection}
+                    className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                >
+                    Далее
+                </button>
+                <button
+                    onClick={onRequestClose}
+                    className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                >
+                    Закрыть
+                </button>
+            </div>
         </Modal>
     );
 };

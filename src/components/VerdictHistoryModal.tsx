@@ -24,6 +24,10 @@ const VerdictHistoryModal: React.FC<VerdictHistoryModalProps> = ({
         setVerdictHistory((prev) => prev.filter((entry) => entry.id !== id));
     };
 
+    const handleClearAll = () => {
+        setVerdictHistory([]);
+    };
+
     return (
         <>
             <Modal
@@ -60,7 +64,13 @@ const VerdictHistoryModal: React.FC<VerdictHistoryModalProps> = ({
                         ))
                     )}
                 </div>
-                <div className="sticky bottom-0 bg-gray-800 py-4 px-6 flex justify-end">
+                <div className="sticky bottom-0 bg-gray-800 py-4 px-6 flex justify-end space-x-2">
+                    <button
+                        onClick={handleClearAll}
+                        className="px-4 py-2 bg-yellow-700 rounded hover:bg-yellow-800"
+                    >
+                        Очистить всё
+                    </button>
                     <button
                         onClick={onRequestClose}
                         className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"

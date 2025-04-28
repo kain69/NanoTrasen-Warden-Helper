@@ -1,7 +1,8 @@
 ## NanoTrasen Warden Helper - карманный помощник по вынесению приговоров
 Создание бумажных приговоров с подсчетом времени по статьям, выбором модификаторов для статей и валидацией этих самых модификаторов.
 
-![image](https://github.com/user-attachments/assets/95e3bb57-ef43-4738-9dbf-634879b59721)
+![image](https://github.com/user-attachments/assets/a2679da5-7b66-4e47-9c92-840a763e666e)
+
 
 Как пользоваться:
 

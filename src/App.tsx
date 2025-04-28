@@ -229,8 +229,7 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
 
 Срок заключения под стражу отсчитывается с: [bold]${currentTime}[/bold]
 =============================================
-                                [italic]Место для печатей[/italic]
-    `;
+                                [italic]Место для печатей[/italic]`;
 
         const result = {
             penalty: finalPenalty,

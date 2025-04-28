@@ -29,11 +29,11 @@ const VerdictHistoryModal: React.FC<VerdictHistoryModalProps> = ({
             <Modal
                 isOpen={isOpen}
                 onRequestClose={onRequestClose}
-                className="bg-gray-800 rounded-lg max-w-lg w-full mx-auto mt-10 text-white px-6 flex flex-col"
+                className="bg-gray-800 rounded-lg w-[32rem] h-[80vh] mx-auto mt-10 text-white flex flex-col"
                 overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
             >
-                <h2 className="text-xl font-bold mb-4 pt-6">История приговоров</h2>
-                <div className="flex-1 overflow-y-auto h-[60vh] space-y-3 px-2">
+                <h2 className="text-xl font-bold mb-4 pt-6 px-6">История приговоров</h2>
+                <div className="flex-1 overflow-y-auto px-6">
                     {verdictHistory.length === 0 ? (
                         <p className="text-gray-400">История пуста.</p>
                     ) : (
@@ -59,7 +59,7 @@ const VerdictHistoryModal: React.FC<VerdictHistoryModalProps> = ({
                         ))
                     )}
                 </div>
-                <div className="sticky bottom-0 bg-gray-800 py-4 flex justify-end">
+                <div className="sticky bottom-0 bg-gray-800 py-4 px-6 flex justify-end">
                     <button
                         onClick={onRequestClose}
                         className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"

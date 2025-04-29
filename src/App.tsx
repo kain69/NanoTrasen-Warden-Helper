@@ -11,6 +11,7 @@ import ResultModal from './components/ResultModal';
 import WarningModal from './components/WarningModal';
 import ConfirmModal from './components/ConfirmModal';
 import VerdictHistoryModal from './components/VerdictHistoryModal';
+import ClownWarningModal from './components/ClownWarningModal';
 import {
     OffenseWithModifiers,
     GlobalModifiers,
@@ -25,7 +26,6 @@ import { v4 as uuidv4 } from 'uuid';
 Modal.setAppElement('#root');
 
 const App: React.FC = () => {
-    // Загружаем профиль из localStorage или используем значения по умолчанию
     const [settings, setSettings] = useState<Settings>(() => {
         const savedProfile = localStorage.getItem('userProfile');
         if (savedProfile) {
@@ -48,6 +48,7 @@ const App: React.FC = () => {
     const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
     const [isGlobalModifiersModalOpen, setIsGlobalModifiersModalOpen] = useState(false);
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+    const [isClownWarningModalOpen, setIsClownWarningModalOpen] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isResultModalOpen, setIsResultModalOpen] = useState(false);
     const [isVerdictHistoryModalOpen, setIsVerdictHistoryModalOpen] = useState(false);
@@ -141,8 +142,28 @@ const App: React.FC = () => {
             alert('Пожалуйста, выберите хотя бы одну статью.');
             return;
         }
+
+        const hasHooliganism = selectedOffenses.some((offense) => {
+            const offenseData = offenses.find((o) => o.code === offense.code);
+            return offenseData?.title === 'Хулиганство';
+        });
+        const isClown = objectDetails.position.toLowerCase().includes('клоун');
+
+        if (hasHooliganism && isClown) {
+            setIsClownWarningModalOpen(true);
+            return;
+        }
+
         setCurrentOffenseCode(selectedOffenses[0].code);
         setIsModifiersModalOpen(true);
+    };
+
+    const handleClownWarningConfirm = (proceed: boolean) => {
+        setIsClownWarningModalOpen(false);
+        if (proceed) {
+            setCurrentOffenseCode(selectedOffenses[0].code);
+            setIsModifiersModalOpen(true);
+        }
     };
 
     const handleModifiersSelection = () => {
@@ -775,6 +796,12 @@ ${offenseDetails.map((detail) => `[bullet/][bold]${detail}[/bold]`).join('\n')}
                 onRequestClose={() => setIsWarningModalOpen(false)}
                 onForceVerdict={handleForceVerdict}
                 message={warningMessage}
+            />
+
+            <ClownWarningModal
+                isOpen={isClownWarningModalOpen}
+                onRequestClose={() => setIsClownWarningModalOpen(false)}
+                onConfirm={handleClownWarningConfirm}
             />
 
             <ConfirmModal

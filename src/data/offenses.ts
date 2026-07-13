@@ -91,5 +91,5 @@ export const chapters = [
     { section: '1XX', chapters: ['11X', '12X', '13X', '14X'] },
     { section: '2XX', chapters: ['21X', '22X'] },
     { section: '3XX', chapters: ['31X', '32X'] },
-    { section: '4XX', chapters: ['41X', '42X', '43X'] },
+    { section: '4XX', chapters: ['41X', '42X', '43X', '44X'] },
 ];
